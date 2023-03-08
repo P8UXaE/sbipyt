@@ -1,0 +1,7 @@
+gcc -shared -o kdtrees.so kdtrees.c -I/usr/local/Cellar/python@3.11/3.11.2_1/Frameworks/Python.framework/Versions/3.11/include/python3.11/ -L/usr/local/Cellar/python@3.11/3.11.2_1/Frameworks/Python.framework/Versions/3.11/lib -lpython3.11
+
+Calculate SHAP value: while SHAP shows the contribution or the importance of each feature on the prediction of the model, it does not evaluate the quality of the prediction itself.
+https://zhanggroup.org/BioLiP/weekly.html
+
+Chimera: in command line (Favorites):
+    select:97, 99, 67 .... all the residues we want to paint
