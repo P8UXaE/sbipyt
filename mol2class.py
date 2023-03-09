@@ -3,6 +3,7 @@ import numpy as np
 import collections
 from ctypes import *
 from kdtrees import KDTree
+import pyscf
 # import sys
 # sys.path.append('kdtrees.so')
 # from kdtrees import KDTree
@@ -67,6 +68,8 @@ class readMol2():
     def featureMatrix(self, atom):
         sasa = self.sasaList()
         data = self.getNeighbors(atom)
+        eDensity = self.electronDensity(data)
+        print(eDensity)
         itsNeighbors = []
         for atomFeature in data:
             distance = atomFeature[1]
@@ -114,6 +117,9 @@ class readMol2():
         else:
             return 'C'  # Coil/loop
 
+    def electronDensity(self, data):
+        print(data)
+        return data
 
 
 
