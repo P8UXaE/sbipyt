@@ -1,4 +1,5 @@
 import mol2class
+from tqdm import tqdm
 
 def create_graphs(mol_file, feat_dim=16):
     """
@@ -14,22 +15,25 @@ def create_graphs(mol_file, feat_dim=16):
 
     mol = mol2class.readMol2(mol_file) # Initializate readMol2 class
     numAtoms = mol.numAtoms()
-    for i in range(numAtoms):
+    adjacency_matrices = []
+    feature_matrices = []
+    for i in tqdm(range(numAtoms), desc="Generating Matrices..."):
         # print(mol.getNeighbors(mol.atoms()[i], k=16))
-        print(mol.adjacencyMatrix(mol.atoms()[i]))
-        print('-'*100)
-        for i in mol.featureMatrix(mol.atoms()[i]):
-            print(i)
-        break
+        adjacency_matrices.append(mol.adjacencyMatrix(mol.atoms()[i]))
+        # print('-'*100)
+        feature_matrices.append(mol.featureMatrix(mol.atoms()[i]))
+        # for i in mol.featureMatrix(mol.atoms()[i]):
+        #     print(i)
+        # break
     # for i, j in zip(mol.atoms(), mol.sasa()):
     #     print(i, j)
     # for i in mol.sasa():
     #     print(i)
 
-    adjacency_matrices = []
-    feature_matrices = []
+
 
 
     return adjacency_matrices, feature_matrices
 
-create_graphs('scPDB/1a2b_1/protein.mol2')
+print(create_graphs('scPDB/1a2b_1/protein.mol2'))
+

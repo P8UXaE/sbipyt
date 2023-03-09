@@ -53,3 +53,8 @@ $ rm -rf myenv
 Check modules:
 $ pip list
 $ pip3 list
+$ pip freeze > requirements.txt
+
+Remove module:
+$ pip remove <package-name>
+

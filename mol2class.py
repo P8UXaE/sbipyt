@@ -21,6 +21,7 @@ class readMol2():
     def atoms(self):
         atom_lines = []
         collect_atoms = False
+        i = 1
         for line in self.mol2_data():
             if '@<TRIPOS>ATOM' in line:
                 collect_atoms = True
@@ -30,7 +31,8 @@ class readMol2():
                     break
                 if line[49] != 'H':
                     if str(line[64:71]).strip()[:3] != 'HOH':
-                        aNum = int(line[0:6])
+                        # aNum = int(line[0:6])
+                        aNum = i
                         aType = str(line[7:14]).strip()
                         aX = float(line[17:26])
                         aY = float(line[28:37])
@@ -40,6 +42,7 @@ class readMol2():
                         rType = str(line[64:71]).strip()
                         aCharge = float(line[72:79])
                         atom_lines.append([aNum, aType, aX, aY, aZ, aType2, rNum, rType, aCharge])
+                        i+=1
         return atom_lines
     
     def numAtoms(self):
@@ -68,22 +71,26 @@ class readMol2():
     def featureMatrix(self, atom):
         sasa = self.sasaList()
         data = self.getNeighbors(atom)
-        eDensity = self.electronDensity(data)
-        print(eDensity)
+        # eDensity = self.electronDensity(data)
+        ljP = self.lj_potential(data)
         itsNeighbors = []
-        for atomFeature in data:
+        for atomFeature, potential in zip(data, ljP):
             distance = atomFeature[1]
             atomFeature = atomFeature[0]
             
 
             atomFeature.append(sasa[atomFeature[0]-1])
             atomFeature[7] = str(atomFeature[7])[0:3]
+            
+            for i in potential:
+                atomFeature.append(i)
 
 
             # del atomFeature[0]
             # del atomFeature[]
 
             itsNeighbors.append(atomFeature)
+            
         # itsNeighbors = np.array(itsNeighbors)
         return itsNeighbors
 
@@ -117,9 +124,83 @@ class readMol2():
         else:
             return 'C'  # Coil/loop
 
-    def electronDensity(self, data):
-        print(data)
-        return data
+    # def electronDensity(self, data):
+    #     dataStr = ''
+    #     for i in data:
+    #         goodData = [i[0][5].split('.')[0], str(i[0][2]), str(i[0][3]), str(i[0][4])]
+    #         print(goodData)
+    #         dataStr += '  '.join(goodData) + '\n'
+    #     print(dataStr)
+    #     mol = pyscf.gto.M(atom=dataStr, basis='sto-3g')
+
+
+    #     # Compute the molecular orbitals
+    #     mf = pyscf.scf.RHF(mol)
+    #     mf.kernel()
+
+    #     # Compute the electron density matrix
+    #     dm = mf.make_rdm1()
+
+    #     # Compute the electron density of each atom
+    #     electron_density = mol.atom_charges()[:, None] - dm.diagonal()
+
+    #     for i in electron_density:
+    #         print(len(i), i)
+
+    #     return data
+
+    import numpy as np
+
+    def lj_potential(self, data):
+        """
+        Compute the Lennard-Jones potential energy.
+        Returns a Matrix with the energies computed between all the neighbors atoms.
+        """
+        dataMatrix = []
+        for i in data:
+            dataRow = np.array([i[0][5].split('.')[0], i[0][2], i[0][3], i[0][4]])
+            dataMatrix.append(dataRow)
+        dataMatrix = np.array(dataMatrix)
+        # print(dataMatrix)
+        m, n = dataMatrix.shape
+        ljP = np.empty([m,m])
+        bond = ''
+        for i in range(m):
+            for j in range(m):
+                r = math.sqrt((float(dataMatrix[i, 1])-float(dataMatrix[j, 1]))**2+(float(dataMatrix[i, 2])-float(dataMatrix[j, 2]))**2+(float(dataMatrix[i, 3])-float(dataMatrix[j, 3]))**2)
+                if len(str(dataMatrix[i, 0])) == 1:
+                    bond = dataMatrix[i, 0]+" -"+dataMatrix[j, 0]
+                elif len(str(dataMatrix[i, 0])) == 2:
+                    bond = dataMatrix[i, 0]+"-"+dataMatrix[j, 0]
+                with open('parm99.dat') as ff:
+                    eps = 0
+                    sig = 0
+                    for line in ff:
+                        if line.startswith(bond):
+                            eps = float(line[7:12])
+                            sig = float(line[16:22])
+                            # print(eps, sig)
+                            break
+                    if eps == 0 and sig == 0:
+                        if len(str(dataMatrix[i, 0])) == 1:
+                            bond = dataMatrix[j, 0]+" -"+dataMatrix[i, 0]
+                        elif len(str(dataMatrix[i, 0])) == 2:
+                            bond = dataMatrix[j, 0]+"-"+dataMatrix[i, 0]
+                        with open('parm99.dat') as ff:
+                            eps = 0
+                            sig = 0
+                            for line in ff:
+                                if line.startswith(bond):
+                                    eps = float(line[7:12])
+                                    sig = float(line[16:22])
+                                    # print(eps, sig)
+                                    break
+                if r != 0:
+                    ljP[i, j] = "{:.3}".format(4 * eps * ((sig / r) ** 12 - (sig / r) ** 6))
+                else:
+                    ljP[i, j] = 0
+        return ljP
+
 
 
 
