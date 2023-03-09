@@ -14,7 +14,6 @@ def create_graphs(mol_file, feat_dim=16):
 
     mol = mol2class.readMol2(mol_file) # Initializate readMol2 class
     numAtoms = mol.numAtoms()
-    print(mol.sasa())
     for i in range(numAtoms):
         # print(mol.getNeighbors(mol.atoms()[i], k=16))
         print(mol.adjacencyMatrix(mol.atoms()[i]))

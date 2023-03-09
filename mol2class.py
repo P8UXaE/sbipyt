@@ -65,9 +65,7 @@ class readMol2():
         return matrix
     
     def featureMatrix(self, atom):
-        sasa = np.array([])
-        for i in self.sasa():
-            sasa = np.append(sasa, i)
+        sasa = self.sasaList()
         data = self.getNeighbors(atom)
         itsNeighbors = []
         for atomFeature in data:
@@ -89,6 +87,12 @@ class readMol2():
     def sasa(self):
         sasa = ShrakeRupley()
         return sasa.compute(np.array(self.atoms()))
+    
+    def sasaList(self):
+        sasa = np.array([])
+        for i in self.sasa():
+            sasa = np.append(sasa, i)
+        return sasa
     
 
     def predict_secondary_structure(self, atom_coords, atom_type):
