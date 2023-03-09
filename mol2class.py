@@ -64,13 +64,51 @@ class readMol2():
                         matrix[i,j] = 1
         return matrix
     
-    def featureMatrix(self):
-        pass
+    def featureMatrix(self, atom):
+        sasa = np.array([])
+        for i in self.sasa():
+            sasa = np.append(sasa, i)
+        data = self.getNeighbors(atom)
+        itsNeighbors = []
+        for atomFeature in data:
+            distance = atomFeature[1]
+            atomFeature = atomFeature[0]
+            
+
+            atomFeature.append(sasa[atomFeature[0]-1])
+            atomFeature[7] = str(atomFeature[7])[0:3]
+
+
+            # del atomFeature[0]
+            # del atomFeature[]
+
+            itsNeighbors.append(atomFeature)
+        # itsNeighbors = np.array(itsNeighbors)
+        return itsNeighbors
 
     def sasa(self):
         sasa = ShrakeRupley()
         return sasa.compute(np.array(self.atoms()))
     
+
+    def predict_secondary_structure(self, atom_coords, atom_type):
+        # Calculate distances between atoms
+        dist_CA_C = np.linalg.norm(atom_coords['CA'] - atom_coords['C'])
+        dist_CA_N = np.linalg.norm(atom_coords['CA'] - atom_coords['N'])
+        dist_CA_O = np.linalg.norm(atom_coords['CA'] - atom_coords['O'])
+        dist_N_O = np.linalg.norm(atom_coords['N'] - atom_coords['O'])
+        
+        # Calculate dihedral angles
+        dihedral_phi = np.arctan2(np.cross(atom_coords['C'] - atom_coords['CA'], atom_coords['N'] - atom_coords['CA']).dot(np.cross(atom_coords['CA'] - atom_coords['C_prev'], atom_coords['N'] - atom_coords['C'])), np.cross(atom_coords['C'] - atom_coords['CA'], atom_coords['CA'] - atom_coords['N']).dot(np.cross(atom_coords['CA'] - atom_coords['C_prev'], atom_coords['N'] - atom_coords['C'])))
+        dihedral_psi = np.arctan2(np.cross(atom_coords['N'] - atom_coords['CA'], atom_coords['C'] - atom_coords['CA']).dot(np.cross(atom_coords['CA'] - atom_coords['N'], atom_coords['C_next'] - atom_coords['CA'])), np.cross(atom_coords['N'] - atom_coords['CA'], atom_coords['CA'] - atom_coords['C']).dot(np.cross(atom_coords['CA'] - atom_coords['N'], atom_coords['C_next'] - atom_coords['CA'])))
+        
+        # Classify residue as helix, sheet, or loop
+        if dist_CA_N < 1.4 and dist_N_O < 1.4 and dihedral_phi < -np.pi/3 and dihedral_psi > np.pi/3:
+            return 'H'  # Helix
+        elif dist_CA_C < 1.4 and dist_CA_O < 1.4 and dihedral_phi > np.pi/3 and dihedral_psi < -np.pi/3:
+            return 'E'  # Sheet
+        else:
+            return 'C'  # Coil/loop
 
 
 
@@ -233,5 +271,10 @@ class ShrakeRupley:
         for i, atom in enumerate(atoms):
             sasa.append(asa_array[i, 0])
         return sasa
+
+
+
+
+
 
 
