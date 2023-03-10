@@ -234,16 +234,19 @@ class Mol2ligand():
             return points
     def SolutionsFeatureMatrix(self, featureMatrix):
         featMatrix = []
+        solList = []
         for atom in featureMatrix:
             ligand = 0
             for cavity in self.points():
                 dist = ((atom[2]-cavity[0])**2+(atom[3]-cavity[1])**2+(atom[4]-cavity[2])**2)
+                print(dist)
                 if dist < 2:
                     ligand = 1
                     break
             atom.append(ligand)
+            solList.append(ligand)
             featMatrix.append(atom)
-        return featMatrix
+        return featMatrix, solList
 
 
 

@@ -52,8 +52,9 @@ def incrementalGNN(rootdir):
         numAtoms = mol.numAtoms()
         for i in tqdm(range(numAtoms), desc="Generating Matrices..."):
             # print(mol.featureMatrix(mol.atoms()[i]))
+            adjacencyMatrix = mol.adjacencyMatrix(mol.atoms()[i])
             molSol = mol2class.Mol2ligand(rootdir+file+'/cavity6.mol2') # Get the molecule into the readMol2 class
-            molSol = molSol.SolutionsFeatureMatrix(mol.featureMatrix(mol.atoms()[i]))
+            featureMatrix = molSol.SolutionsFeatureMatrix(mol.featureMatrix(mol.atoms()[i]))
             # print(molSol)
 
         print('│ ├─'+'cavity6.mol2')
