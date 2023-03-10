@@ -5,3 +5,6 @@ https://zhanggroup.org/BioLiP/weekly.html
 
 Chimera: in command line (Favorites):
     select:97, 99, 67 .... all the residues we want to paint
+
+
+conda install pytorch torchvision -c pytorch

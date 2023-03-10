@@ -171,3 +171,73 @@ batch = next(iter(DataLoader(load_batch(batch_size), batch_size=batch_size)))
 model.eval()
 output = model(batch.x, batch.edge_index, batch.batch)
 print('Predicted features:', output.detach().numpy())
+
+
+################################### Incremental gnn learning
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+
+class GNN(nn.Module):
+    def __init__(self, num_features, num_classes):
+        super(GNN, self).__init__()
+        self.conv1 = nn.Conv2d(num_features, num_features, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(num_features, num_features, kernel_size=3, padding=1)
+        self.fc = nn.Linear(num_features, num_classes)
+        
+    def forward(self, x, adj_matrix):
+        # Iterate over the graph for a fixed number of iterations
+        num_iterations = 10
+        for i in range(num_iterations):
+            x = F.relu(self.conv1(x))
+            x = F.relu(self.conv2(x))
+            x = torch.matmul(adj_matrix, x)
+        x = self.fc(x)
+        return x
+
+# Define the incremental training function
+def incremental_train(model, optimizer, loss_fn, memory, new_data):
+    # Combine the new data with a random subset of the memory
+    batch_size = 32
+    memory_size = len(memory)
+    indices = torch.randperm(memory_size)[:batch_size-1]
+    combined_data = torch.cat([new_data] + [memory[i] for i in indices])
+    
+    # Zero the gradients
+    optimizer.zero_grad()
+    
+    # Forward pass
+    output = model(combined_data)
+    
+    # Compute the loss
+    loss = loss_fn(output, target)
+    
+    # Backward pass
+    loss.backward()
+    
+    # Update the parameters
+    optimizer.step()
+    
+    # Update the memory
+    if memory_size >= batch_size:
+        memory[indices[-1]] = new_data
+    else:
+        memory.append(new_data)
+
+# Initialize the model, optimizer, and loss function
+model = GNN(num_features=64, num_classes=10)
+optimizer = optim.SGD(model.parameters(), lr=0.01)
+loss_fn = nn.CrossEntropyLoss()
+
+# Initialize the memory buffer
+memory = []
+
+# Train the model on a sequence of subgraphs
+for i in range(num_subgraphs):
+    # Generate the new subgraph
+    subgraph = generate_subgraph(i)
+    
+    # Train the model incrementally
+    incremental_train(model, optimizer, loss_fn, memory, subgraph)

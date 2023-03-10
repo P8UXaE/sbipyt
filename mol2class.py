@@ -9,14 +9,17 @@ import pyscf
 # from kdtrees import KDTree
 
 class readMol2():
+    # __slots__=['_file']
 
     def __init__(self, mol2file):
-        self.__file = mol2file
+        self._file = mol2file
+        self._sasa = None
 
     def mol2_data(self):
-        with open(self.__file, 'r') as f:
-            mol2_data = f.readlines()
-        return mol2_data
+        with open(self._file, 'r') as f:
+            yield from f
+            # mol2_data = f.readlines()
+        # return mol2_data
 
     def atoms(self):
         atom_lines = []
@@ -77,20 +80,15 @@ class readMol2():
         for atomFeature, potential in zip(data, ljP):
             distance = atomFeature[1]
             atomFeature = atomFeature[0]
-            
 
             atomFeature.append(sasa[atomFeature[0]-1])
             atomFeature[7] = str(atomFeature[7])[0:3]
-            
+
             for i in potential:
                 atomFeature.append(i)
-
-
             # del atomFeature[0]
             # del atomFeature[]
-
             itsNeighbors.append(atomFeature)
-            
         # itsNeighbors = np.array(itsNeighbors)
         return itsNeighbors
 
@@ -99,10 +97,12 @@ class readMol2():
         return sasa.compute(np.array(self.atoms()))
     
     def sasaList(self):
-        sasa = np.array([])
-        for i in self.sasa():
-            sasa = np.append(sasa, i)
-        return sasa
+        if self._sasa is None:
+            sasa = np.array([])
+            for i in self.sasa():
+                sasa = np.append(sasa, i)
+            self._sasa = sasa
+        return self._sasa
     
 
     def predict_secondary_structure(self, atom_coords, atom_type):
@@ -172,37 +172,78 @@ class readMol2():
                     bond = dataMatrix[i, 0]+" -"+dataMatrix[j, 0]
                 elif len(str(dataMatrix[i, 0])) == 2:
                     bond = dataMatrix[i, 0]+"-"+dataMatrix[j, 0]
-                with open('parm99.dat') as ff:
-                    eps = 0
-                    sig = 0
-                    for line in ff:
+                # print('Bond', bond)
+                # with open('parm99.dat') as ff:
+                eps = 0
+                sig = 0
+                # for line in ff:
+                for line in self.readAtomES():
+                    if line.startswith(bond):
+                        eps = float(line[7:12])
+                        sig = float(line[16:22])
+                        # print(eps, sig)
+                        break
+                if eps == 0 and sig == 0:
+                    if len(str(dataMatrix[i, 0])) == 1:
+                        bond = dataMatrix[j, 0]+" -"+dataMatrix[i, 0]
+                    elif len(str(dataMatrix[i, 0])) == 2:
+                        bond = dataMatrix[j, 0]+"-"+dataMatrix[i, 0]
+                    # with open('parm99.dat') as ff:
+                        # eps = 0
+                        # sig = 0
+                        # for line in ff:
+                    for line in self.readAtomES():
+                        # print('Second:', line)
                         if line.startswith(bond):
                             eps = float(line[7:12])
                             sig = float(line[16:22])
                             # print(eps, sig)
                             break
-                    if eps == 0 and sig == 0:
-                        if len(str(dataMatrix[i, 0])) == 1:
-                            bond = dataMatrix[j, 0]+" -"+dataMatrix[i, 0]
-                        elif len(str(dataMatrix[i, 0])) == 2:
-                            bond = dataMatrix[j, 0]+"-"+dataMatrix[i, 0]
-                        with open('parm99.dat') as ff:
-                            eps = 0
-                            sig = 0
-                            for line in ff:
-                                if line.startswith(bond):
-                                    eps = float(line[7:12])
-                                    sig = float(line[16:22])
-                                    # print(eps, sig)
-                                    break
                 if r != 0:
                     ljP[i, j] = "{:.3}".format(4 * eps * ((sig / r) ** 12 - (sig / r) ** 6))
                 else:
                     ljP[i, j] = 0
+        # print(ljP)
         return ljP
+    
+    def readAtomES(self):
+        with open('parm99.dat') as ff:
+            yield from ff
 
 
 
+class Mol2ligand():
+    def __init__(self, mol2ligand):
+        # self.__mol = mol
+        self.__ligand = mol2ligand
+    def readSolution(self):
+        with open(self.__ligand, 'r') as f:
+            ligand_data = f.readlines()
+        return ligand_data
+    def points(self):
+        points = []
+        collect_atoms = False
+        for line in self.readSolution():
+            if '@<TRIPOS>ATOM' in line:
+                collect_atoms = True
+                continue
+            if collect_atoms:
+                if line.startswith('@<TRIPOS>'):
+                    break
+                points.append([float(line[18:26]), float(line[29:37]), float(line[40:48])])
+            return points
+    def SolutionsFeatureMatrix(self, featureMatrix):
+        featMatrix = []
+        for atom in featureMatrix:
+            ligand = 0
+            for cavity in self.points():
+                dist = ((atom[2]-cavity[0])**2+(atom[3]-cavity[1])**2+(atom[4]-cavity[2])**2)
+                if dist < 2:
+                    ligand = 1
+                    break
+            atom.append(ligand)
+            featMatrix.append(atom)
+        return featMatrix
 
 
 
