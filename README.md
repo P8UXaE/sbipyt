@@ -1,6 +1,8 @@
 # sbipyt
 SBI-PYT project
 
+Runs in python 3.9
+
 Incremental gnn learning
 
 There is a subset of 5 mol2 in scPDB folder. The .gz is 4..GB
@@ -44,6 +46,8 @@ scPDB
 ```
 
 The protein structure is extracted from the protein.mol2 file. The atoms that are binding atoms (ommiting H) are labeled thanks to both cavity and site. Cavity is just a mol2 file with spaced dots that represent the cavity where the ligand is placed. The site is a residue subset that are near the cavity. Using those and a discance of x Å we can determine which atoms should be labled as bindin atoms inside the cavity. Not taking into account any type of bond or Van der Waals force.
+
+git add --all -- ':!python3_9venv'
 
 Create a virtual env:
 $ python3.9 -m venv myenv (in order to install pytorch)

@@ -17,7 +17,6 @@ def incrementalGNN(rootdir):
             adjacencyMatrix = mol.adjacencyMatrix(mol.atoms()[i])
             molSol = mol2class.Mol2ligand(rootdir+file+'/cavity6.mol2') # Get the molecule into the readMol2 class
             featureMatrix, solutions = molSol.SolutionsFeatureMatrix(mol.featureMatrix(mol.atoms()[i]))
-            print(solutions)
 
 
         print('│ ├─'+'cavity6.mol2')
@@ -27,6 +26,9 @@ def incrementalGNN(rootdir):
 
 incrementalGNN('scPDB/')
 
+            # if 1 in solutions:
+            #     print('There is a solution')
+            #     print(solutions)
 
 '''
 import os

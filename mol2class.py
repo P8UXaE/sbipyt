@@ -2,11 +2,8 @@ import math
 import numpy as np
 import collections
 from ctypes import *
-from kdtrees import KDTree
+from Bio.PDB.kdtrees import KDTree
 import pyscf
-# import sys
-# sys.path.append('kdtrees.so')
-# from kdtrees import KDTree
 
 class readMol2():
     # __slots__=['_file']
@@ -213,13 +210,17 @@ class readMol2():
 
 
 class Mol2ligand():
+
     def __init__(self, mol2ligand):
-        # self.__mol = mol
-        self.__ligand = mol2ligand
+        self._ligand = mol2ligand
+
     def readSolution(self):
-        with open(self.__ligand, 'r') as f:
-            ligand_data = f.readlines()
-        return ligand_data
+        with open(self._ligand, 'r') as fl:
+            yield from fl
+            # ligand_data = fl.readlines()
+        # return ligand_data
+            
+            
     def points(self):
         points = []
         collect_atoms = False
@@ -230,17 +231,19 @@ class Mol2ligand():
             if collect_atoms:
                 if line.startswith('@<TRIPOS>'):
                     break
-                points.append([float(line[18:26]), float(line[29:37]), float(line[40:48])])
-            return points
+                points.append([float(line[17:25]), float(line[27:35]), float(line[37:45])])
+        return points
+        
     def SolutionsFeatureMatrix(self, featureMatrix):
         featMatrix = []
         solList = []
         for atom in featureMatrix:
             ligand = 0
             for cavity in self.points():
-                dist = ((atom[2]-cavity[0])**2+(atom[3]-cavity[1])**2+(atom[4]-cavity[2])**2)
-                print(dist)
-                if dist < 2:
+                dist = math.sqrt((atom[2]-cavity[0])**2+(atom[3]-cavity[1])**2+(atom[4]-cavity[2])**2)
+                # print([atom[2],cavity[0],atom[3],cavity[1],atom[4],cavity[2]])
+                # print(dist)
+                if dist < 3.5:
                     ligand = 1
                     break
             atom.append(ligand)

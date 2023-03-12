@@ -1,6 +1,7 @@
 import mol2class
 from tqdm import tqdm
 import os
+import numpy as np
 
 
 
@@ -44,6 +45,7 @@ def create_graphs(mol_file, feat_dim=16):
 # print(create_graphs('scPDB/1a2b_1/protein.mol2'))
 
 def incrementalGNN(rootdir):
+
     for file in os.listdir(rootdir): # This will get all the proteins inside the scPDB folder
         print('├─'+file)
 
@@ -55,6 +57,8 @@ def incrementalGNN(rootdir):
             adjacencyMatrix = mol.adjacencyMatrix(mol.atoms()[i])
             molSol = mol2class.Mol2ligand(rootdir+file+'/cavity6.mol2') # Get the molecule into the readMol2 class
             featureMatrix = molSol.SolutionsFeatureMatrix(mol.featureMatrix(mol.atoms()[i]))
+
+
             # print(molSol)
 
         print('│ ├─'+'cavity6.mol2')
