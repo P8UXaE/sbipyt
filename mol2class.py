@@ -83,7 +83,12 @@ class readMol2():
 
             for i in potential:
                 atomFeature.append(i)
-            # del atomFeature[0]
+            del atomFeature[0]
+            del atomFeature[0]
+            del atomFeature[3]
+            del atomFeature[3]
+            del atomFeature[3]
+            # print(atomFeature)
             # del atomFeature[]
             itsNeighbors.append(atomFeature)
         # itsNeighbors = np.array(itsNeighbors)
@@ -240,7 +245,7 @@ class Mol2ligand():
         for atom in featureMatrix:
             ligand = 0
             for cavity in self.points():
-                dist = math.sqrt((atom[2]-cavity[0])**2+(atom[3]-cavity[1])**2+(atom[4]-cavity[2])**2)
+                dist = math.sqrt((atom[0]-cavity[0])**2+(atom[1]-cavity[1])**2+(atom[2]-cavity[2])**2)
                 # print([atom[2],cavity[0],atom[3],cavity[1],atom[4],cavity[2]])
                 # print(dist)
                 if dist < 3.5:
@@ -249,7 +254,7 @@ class Mol2ligand():
             atom.append(ligand)
             solList.append(ligand)
             featMatrix.append(atom)
-        return featMatrix, solList
+        return np.array(featMatrix), solList
 
 
 
