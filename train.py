@@ -4,6 +4,7 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import sys
 
 
 
@@ -48,52 +49,63 @@ optimizer = optim.Adam(gnn_model.parameters(), lr=0.001)
 
 
 
+with open('already_trained_molecules.txt', 'r') as at:
+    molecules_trained = at.read().splitlines()
+at.close()
+
 rootdir = 'scPDB/'
+accuracy = 0
+iters = 1
+
+# Load the saved model
+gnn_model.load_state_dict(torch.load('gnn_model.pth'))
 
 # Step 4: Loas the data for training
 for file in os.listdir(rootdir): # This will get all the proteins inside the scPDB folder
+
+    if file in molecules_trained:
+        continue
+
     print('├─'+file)
     print('│ ├─'+'protein.mol2')
     mol = mol2class.readMol2(rootdir+file+'/protein.mol2') # Get the molecule into the readMol2 class
     numAtoms = mol.numAtoms()
-    for i in tqdm(range(numAtoms), desc="Generating Matrices..."):
+    for i in tqdm(range(numAtoms), desc="Generating Matrices...", file=sys.stdout):
         adj_matrix = mol.adjacencyMatrix(mol.atoms()[i])
         molSol = mol2class.Mol2ligand(rootdir+file+'/cavity6.mol2') # Get the molecule into the readMol2 class
         feature_matrix, solutions = molSol.SolutionsFeatureMatrix(mol.featureMatrix(mol.atoms()[i]))
-
         adj_matrix = torch.tensor(adj_matrix)
         feature_matrix = torch.tensor(feature_matrix)
-        
-        # print(adj_matrix.dtype, feature_matrix.dtype)
-        # print(adj_matrix.shape,feature_matrix.shape)
-        # print(adj_matrix,feature_matrix)
-        # x = torch.cat((feature_matrix.to(torch.float64), adj_matrix.to(torch.float64)), dim=1)
-        # print(x)
         # Step 5: Train the GNN model
         adj_matrix = adj_matrix.to(dtype=torch.float32)
         feature_matrix = feature_matrix.to(dtype=torch.float32)
-        
         output = gnn_model(feature_matrix, adj_matrix)
-        
         solutions2 = []
         for i in solutions:
             solutions2.append([i])
         solutions = solutions2
         solutions = torch.tensor(solutions)
         solutions = solutions.to(dtype=torch.float32)
-
-        # print(output, solutions)
-
+        calculus = 0
+        for i, j in zip(output.tolist(), solutions.tolist()):
+            calculus += 1-abs(i[0]-j[0])
+        accuracy += calculus/len(output.tolist())
+        print(str(accuracy/iters)+'\n', file=sys.stderr)
+        iters += 1
         loss = criterion(output, solutions)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        # Step 6: Save the GNN model
-        torch.save(gnn_model.state_dict(), 'gnn_model.pth')
-        # Step 7: Load the GNN model
-        gnn_model.load_state_dict(torch.load('gnn_model.pth'))
 
+    # Step 6: Save the GNN model
+    torch.save(gnn_model.state_dict(), 'gnn_model.pth')
+    # Step 7: Load the GNN model
+    gnn_model.load_state_dict(torch.load('gnn_model.pth'))
     print('│ ├─'+'cavity6.mol2')
+    with open('already_trained_molecules.txt', 'a') as at:
+        at.write(file+'\n')
+    at.close()
+    molecules_trained.append(file)
 
 
 

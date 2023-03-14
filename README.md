@@ -65,4 +65,4 @@ $ pip freeze > requirements.txt
 Remove module:
 $ pip remove <package-name>
 
-git add . && git reset ./python3_9venv
+Add everything except the env: git add . && git reset ./python3_9venv
