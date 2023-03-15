@@ -1,4 +1,4 @@
-import mol2class
+import proteinclass
 from tqdm import tqdm
 import os
 import torch
@@ -10,12 +10,12 @@ def incrementalGNN(rootdir):
         print('├─'+file)
 
         print('│ ├─'+'protein.mol2')
-        mol = mol2class.readMol2(rootdir+file+'/protein.mol2') # Get the molecule into the readMol2 class
+        mol = proteinclass.readMol2(rootdir+file+'/protein.mol2') # Get the molecule into the readMol2 class
         numAtoms = mol.numAtoms()
         for i in tqdm(range(numAtoms), desc="Generating Matrices..."):
 
             adjacencyMatrix = mol.adjacencyMatrix(mol.atoms()[i])
-            molSol = mol2class.Mol2ligand(rootdir+file+'/cavity6.mol2') # Get the molecule into the readMol2 class
+            molSol = proteinclass.Mol2ligand(rootdir+file+'/cavity6.mol2') # Get the molecule into the readMol2 class
             featureMatrix, solutions = molSol.SolutionsFeatureMatrix(mol.featureMatrix(mol.atoms()[i]))
 
 

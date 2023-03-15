@@ -1,4 +1,4 @@
-import mol2class
+import proteinclass
 from tqdm import tqdm
 import os
 import torch
@@ -33,11 +33,11 @@ file = '4f0e_1'
 # Load the saved model
 gnn_model.load_state_dict(torch.load('gnn_model.pth'))
 
-mol = mol2class.readMol2(rootdir+file+'/protein.mol2') # Get the molecule into the readMol2 class
+mol = proteinclass.readMol2(rootdir+file+'/protein.mol2') # Get the molecule into the readMol2 class
 numAtoms = mol.numAtoms()
 for i in tqdm(range(numAtoms), desc="Generating Matrices...", file=sys.stdout):
     adj_matrix = mol.adjacencyMatrix(mol.atoms()[i])
-    molSol = mol2class.Mol2ligand(rootdir+file+'/cavity6.mol2') # Get the molecule into the readMol2 class
+    molSol = proteinclass.Mol2ligand(rootdir+file+'/cavity6.mol2') # Get the molecule into the readMol2 class
     feature_matrix = molSol.SolutionsFeatureMatrix(mol.featureMatrix(mol.atoms()[i]))
     adj_matrix = torch.tensor(adj_matrix)
     feature_matrix = torch.tensor(feature_matrix)

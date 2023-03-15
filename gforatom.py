@@ -1,4 +1,4 @@
-import mol2class
+import proteinclass
 from tqdm import tqdm
 import os
 import numpy as np
@@ -17,7 +17,7 @@ def create_graphs(mol_file, feat_dim=16):
         feature_matrices (list of np.ndarray): List of feature matrices for each atom.
     """
 
-    mol = mol2class.readMol2(mol_file) # Initializate readMol2 class
+    mol = proteinclass.readMol2(mol_file) # Initializate readMol2 class
     numAtoms = mol.numAtoms()
     adjacency_matrices = []
     feature_matrices = []
@@ -50,12 +50,12 @@ def incrementalGNN(rootdir):
         print('├─'+file)
 
         print('│ ├─'+'protein.mol2')
-        mol = mol2class.readMol2(rootdir+file+'/protein.mol2') # Get the molecule into the readMol2 class
+        mol = proteinclass.readMol2(rootdir+file+'/protein.mol2') # Get the molecule into the readMol2 class
         numAtoms = mol.numAtoms()
         for i in tqdm(range(numAtoms), desc="Generating Matrices..."):
             # print(mol.featureMatrix(mol.atoms()[i]))
             adjacencyMatrix = mol.adjacencyMatrix(mol.atoms()[i])
-            molSol = mol2class.Mol2ligand(rootdir+file+'/cavity6.mol2') # Get the molecule into the readMol2 class
+            molSol = proteinclass.Mol2ligand(rootdir+file+'/cavity6.mol2') # Get the molecule into the readMol2 class
             featureMatrix = molSol.SolutionsFeatureMatrix(mol.featureMatrix(mol.atoms()[i]))
 
 

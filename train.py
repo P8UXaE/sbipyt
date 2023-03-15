@@ -1,10 +1,11 @@
-import mol2class
+import proteinclass
 from tqdm import tqdm
 import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import sys
+import gnnclass as gnc
 
 
 
@@ -23,25 +24,12 @@ import sys
 #         x = self.fc2(x)
 #         return x
 
-class GNN(torch.nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim):
-        super(GNN, self).__init__()
-        self.fc1 = torch.nn.Linear(input_dim, hidden_dim)
-        self.fc2 = torch.nn.Linear(hidden_dim, output_dim)
-
-    def forward(self, x, adj):
-        x = self.fc1(x)
-        x = torch.relu(x)
-        x = self.fc2(x)
-        x = torch.sigmoid(x)
-        return x
-
 
 # Step 2: Initialize the GNN model
-input_dim = 22
-hidden_dim = 128
+input_dim = 2
+hidden_dim = 4
 output_dim = 1
-gnn_model = GNN(input_dim, hidden_dim, output_dim)
+gnn_model = gnc.GNN(input_dim, hidden_dim, output_dim)
 
 # Step 3: Define the loss function and optimizer
 criterion = nn.CrossEntropyLoss()
@@ -58,7 +46,8 @@ accuracy = 0
 iters = 1
 
 # Load the saved model
-gnn_model.load_state_dict(torch.load('gnn_model.pth'))
+if os.path.isfile('gnn_model.pth'):
+    gnn_model.load_state_dict(torch.load('gnn_model.pth'))
 
 # Step 4: Loas the data for training
 for file in os.listdir(rootdir): # This will get all the proteins inside the scPDB folder
@@ -68,12 +57,14 @@ for file in os.listdir(rootdir): # This will get all the proteins inside the sc
 
     print('├─'+file)
     print('│ ├─'+'protein.mol2')
-    mol = mol2class.readMol2(rootdir+file+'/protein.mol2') # Get the molecule into the readMol2 class
+    mol = proteinclass.readMod2(rootdir+file+'/protein.mol2') # Get the molecule into the readMol2 class
     numAtoms = mol.numAtoms()
     for i in tqdm(range(numAtoms), desc="Generating Matrices...", file=sys.stdout):
         adj_matrix = mol.adjacencyMatrix(mol.atoms()[i])
-        molSol = mol2class.Mol2ligand(rootdir+file+'/cavity6.mol2') # Get the molecule into the readMol2 class
-        feature_matrix, solutions = molSol.SolutionsFeatureMatrix(mol.featureMatrix(mol.atoms()[i]))
+        molSol = proteinclass.Mol2ligand(rootdir+file+'/cavity6.mol2') # Get the molecule into the readMol2 class
+        feature_matrix = mol.featureMatrix(mol.atoms()[i])
+        solutions = molSol.SolutionsFeatureMatrix(mol.getNeighbors(mol.atoms()[i]))
+        # feature_matrix, solutions = molSol.SolutionsFeatureMatrix(mol.featureMatrix(mol.atoms()[i]))
         adj_matrix = torch.tensor(adj_matrix)
         feature_matrix = torch.tensor(feature_matrix)
         # Step 5: Train the GNN model

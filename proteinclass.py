@@ -4,46 +4,18 @@ import collections
 from ctypes import *
 from Bio.PDB.kdtrees import KDTree
 import pyscf
+import chemistry as chem
 
-class readMol2():
+class readprotein():
     # __slots__=['_file']
 
-    def __init__(self, mol2file):
-        self._file = mol2file
+    def __init__(self, file):
+        self._file = file
         self._sasa = None
 
-    def mol2_data(self):
+    def data(self):
         with open(self._file, 'r') as f:
             yield from f
-            # mol2_data = f.readlines()
-        # return mol2_data
-
-    def atoms(self):
-        atom_lines = []
-        collect_atoms = False
-        i = 1
-        for line in self.mol2_data():
-            if '@<TRIPOS>ATOM' in line:
-                collect_atoms = True
-                continue
-            if collect_atoms:
-                if line.startswith('@<TRIPOS>'):
-                    break
-                if line[49] != 'H':
-                    if str(line[64:71]).strip()[:3] != 'HOH':
-                        # aNum = int(line[0:6])
-                        aNum = i
-                        aType = str(line[7:14]).strip()
-                        aX = float(line[17:26])
-                        aY = float(line[28:37])
-                        aZ = float(line[40:48])
-                        aType2 = str(line[49:56]).strip()
-                        rNum = int(line[58:63])
-                        rType = str(line[64:71]).strip()
-                        aCharge = float(line[72:79])
-                        atom_lines.append([aNum, aType, aX, aY, aZ, aType2, rNum, rType, aCharge])
-                        i+=1
-        return atom_lines
     
     def numAtoms(self):
         return len(self.atoms())
@@ -69,30 +41,76 @@ class readMol2():
         return matrix
     
     def featureMatrix(self, atom):
+        '''
+        Get the feature Matrix for the atom and its neighbors.
+        ---
+        Position and description:
+        []
+
+        '''
         sasa = self.sasaList()
         data = self.getNeighbors(atom)
-        # eDensity = self.electronDensity(data)
+        print(data)
+        directions = self.directions(data)
+        # eDensity = self.electronDensity(data)
         ljP = self.lj_potential(data)
-        itsNeighbors = []
-        for atomFeature, potential in zip(data, ljP):
+        featMat = []
+        for atomFeature, potential, direction in zip(data, ljP, directions):
             distance = atomFeature[1]
             atomFeature = atomFeature[0]
 
             atomFeature.append(sasa[atomFeature[0]-1])
-            atomFeature[7] = str(atomFeature[7])[0:3]
 
             for i in potential:
                 atomFeature.append(i)
-            del atomFeature[0]
-            del atomFeature[0]
-            del atomFeature[3]
-            del atomFeature[3]
-            del atomFeature[3]
-            # print(atomFeature)
-            # del atomFeature[]
-            itsNeighbors.append(atomFeature)
-        # itsNeighbors = np.array(itsNeighbors)
-        return itsNeighbors
+
+            for d in [chem.dictionary_kd_hydrophobicity, chem.dictionary_ww_hydrophobicity, chem.dictionary_hh_hydrophobicity, chem.dictionary_mf_hydrophobicity, chem.dictionary_tt_hydrophobicity]:
+                if atomFeature[7] not in d:
+                    for i in range(5):
+                        atomFeature.append(0)
+                else:
+                    atomFeature.append(chem.dictionary_kd_hydrophobicity[atomFeature[7]])
+                    atomFeature.append(chem.dictionary_ww_hydrophobicity[atomFeature[7]])
+                    atomFeature.append(chem.dictionary_hh_hydrophobicity[atomFeature[7]])
+                    atomFeature.append(chem.dictionary_mf_hydrophobicity[atomFeature[7]])
+                    atomFeature.append(chem.dictionary_tt_hydrophobicity[atomFeature[7]])
+            
+            for i in direction:
+                atomFeature.append(i)
+
+
+
+
+
+
+            # del atomFeature[0]
+            # del atomFeature[0]
+            # del atomFeature[3]
+            # del atomFeature[3]
+            # del atomFeature[3]
+            # # print(atomFeature)
+            # # del atomFeature[]
+
+            # del atomFeature[0:3]
+            # del atomFeature[2:]
+
+
+            print(atomFeature)
+
+            featMat.append(atomFeature)
+
+        return featMat
+
+    def directions(self, data):
+        given_atom = data[0][0][2:5]
+        neighbor_atoms = []
+        for i in data:
+            neighbor_atoms.append(i[0][2:5])
+        given_atom = np.array(given_atom)
+        neighbor_atoms = np.array(neighbor_atoms)
+        directions = neighbor_atoms-given_atom
+
+        return directions
 
     def sasa(self):
         sasa = ShrakeRupley()
@@ -107,24 +125,47 @@ class readMol2():
         return self._sasa
     
 
-    def predict_secondary_structure(self, atom_coords, atom_type):
-        # Calculate distances between atoms
-        dist_CA_C = np.linalg.norm(atom_coords['CA'] - atom_coords['C'])
-        dist_CA_N = np.linalg.norm(atom_coords['CA'] - atom_coords['N'])
-        dist_CA_O = np.linalg.norm(atom_coords['CA'] - atom_coords['O'])
-        dist_N_O = np.linalg.norm(atom_coords['N'] - atom_coords['O'])
+    def calculate_secondary_structure(self, coords):
+        # Define the hydrogen bonding distance cutoffs for each type of interaction
+        hbond_cutoffs = {'helix': 2.5, 'sheet': 3.5}
         
-        # Calculate dihedral angles
-        dihedral_phi = np.arctan2(np.cross(atom_coords['C'] - atom_coords['CA'], atom_coords['N'] - atom_coords['CA']).dot(np.cross(atom_coords['CA'] - atom_coords['C_prev'], atom_coords['N'] - atom_coords['C'])), np.cross(atom_coords['C'] - atom_coords['CA'], atom_coords['CA'] - atom_coords['N']).dot(np.cross(atom_coords['CA'] - atom_coords['C_prev'], atom_coords['N'] - atom_coords['C'])))
-        dihedral_psi = np.arctan2(np.cross(atom_coords['N'] - atom_coords['CA'], atom_coords['C'] - atom_coords['CA']).dot(np.cross(atom_coords['CA'] - atom_coords['N'], atom_coords['C_next'] - atom_coords['CA'])), np.cross(atom_coords['N'] - atom_coords['CA'], atom_coords['CA'] - atom_coords['C']).dot(np.cross(atom_coords['CA'] - atom_coords['N'], atom_coords['C_next'] - atom_coords['CA'])))
+        # Define the angles for each type of secondary structure
+        helix_angles = {'C-alpha-C': 1.5, 'C-N-C-alpha': 2.0}
+        sheet_angles = {'C-alpha-C': 2.0, 'C-N-C-alpha': 1.5}
         
-        # Classify residue as helix, sheet, or loop
-        if dist_CA_N < 1.4 and dist_N_O < 1.4 and dihedral_phi < -np.pi/3 and dihedral_psi > np.pi/3:
-            return 'H'  # Helix
-        elif dist_CA_C < 1.4 and dist_CA_O < 1.4 and dihedral_phi > np.pi/3 and dihedral_psi < -np.pi/3:
-            return 'E'  # Sheet
-        else:
-            return 'C'  # Coil/loop
+        # Initialize the secondary structure assignment for each residue
+        sec_struct = ['?' for i in range(len(coords))]
+        
+        # Iterate over each residue and compare its hydrogen bonding distance to adjacent residues
+        for i in range(len(coords)):
+            for j in range(i+1, len(coords)):
+                dist = np.linalg.norm(coords[i]['N'] - coords[j]['O'])
+                if dist < hbond_cutoffs['helix']:
+                    # Check if the angle between the C-alpha, C, and N atoms is within the helix range
+                    angle1 = calculate_angle(coords[i]['C-alpha'], coords[i]['C'], coords[j]['N'])
+                    angle2 = calculate_angle(coords[j]['C'], coords[j]['N'], coords[i]['C-alpha'])
+                    if abs(angle1 - helix_angles['C-alpha-C']) < 0.5 and abs(angle2 - helix_angles['C-N-C-alpha']) < 0.5:
+                        sec_struct[i] = 'H'
+                        sec_struct[j] = 'H'
+                elif dist < hbond_cutoffs['sheet']:
+                    # Check if the angle between the C-alpha, C, and N atoms is within the sheet range
+                    angle1 = calculate_angle(coords[i]['C-alpha'], coords[i]['C'], coords[j]['N'])
+                    angle2 = calculate_angle(coords[j]['C'], coords[j]['N'], coords[i]['C-alpha'])
+                    if abs(angle1 - sheet_angles['C-alpha-C']) < 0.5 and abs(angle2 - sheet_angles['C-N-C-alpha']) < 0.5:
+                        sec_struct[i] = 'E'
+                        sec_struct[j] = 'E'
+        
+        return sec_struct
+
+
+    def calculate_angle(self, p1, p2, p3):
+        v1 = p1 - p2
+        v2 = p3 - p2
+        cos_theta = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+        theta = np.arccos(cos_theta)
+        return theta * 180 / np.pi
+
+
 
     # def electronDensity(self, data):
     #     dataStr = ''
@@ -150,8 +191,6 @@ class readMol2():
     #         print(len(i), i)
 
     #     return data
-
-    import numpy as np
 
     def lj_potential(self, data):
         """
@@ -213,6 +252,44 @@ class readMol2():
             yield from ff
 
 
+class readMod2(readprotein):
+    '''
+    Explicit to read the mol2 file
+    '''
+
+    def atoms(self):
+        atom_lines = []
+        collect_atoms = False
+        i = 1
+        for line in self.data():
+            if '@<TRIPOS>ATOM' in line:
+                collect_atoms = True
+                continue
+            if collect_atoms:
+                if line.startswith('@<TRIPOS>'):
+                    break
+                if line[49] != 'H':
+                    if str(line[64:71]).strip()[:3] != 'HOH':
+                        # aNum = int(line[0:6])
+                        aNum = i
+                        aType = str(line[7:14]).strip()
+                        aX = float(line[17:26])
+                        aY = float(line[28:37])
+                        aZ = float(line[40:48])
+                        aType2 = str(line[49:56]).strip()
+                        rNum = int(line[58:63])
+                        rType = str(line[64:71]).strip()
+                        aCharge = float(line[72:79])
+                        atom_lines.append([aNum, aType, aX, aY, aZ, aType2, rNum, rType[0:3], aCharge])
+                        i+=1
+        return atom_lines
+
+
+class readpdb(readprotein):
+    '''
+    Explicit to read the pdb file
+    '''
+    pass
 
 class Mol2ligand():
 
@@ -224,8 +301,7 @@ class Mol2ligand():
             yield from fl
             # ligand_data = fl.readlines()
         # return ligand_data
-            
-            
+ 
     def points(self):
         points = []
         collect_atoms = False
@@ -239,22 +315,20 @@ class Mol2ligand():
                 points.append([float(line[17:25]), float(line[27:35]), float(line[37:45])])
         return points
         
-    def SolutionsFeatureMatrix(self, featureMatrix):
-        featMatrix = []
+    def SolutionsFeatureMatrix(self, matrix):
         solList = []
-        for atom in featureMatrix:
+        for atom in matrix:
+            atom = atom[0]
             ligand = 0
             for cavity in self.points():
-                dist = math.sqrt((atom[0]-cavity[0])**2+(atom[1]-cavity[1])**2+(atom[2]-cavity[2])**2)
+                dist = math.sqrt((atom[2]-cavity[0])**2+(atom[3]-cavity[1])**2+(atom[4]-cavity[2])**2)
                 # print([atom[2],cavity[0],atom[3],cavity[1],atom[4],cavity[2]])
                 # print(dist)
                 if dist < 3.5:
                     ligand = 1
                     break
-            atom.append(ligand)
             solList.append(ligand)
-            featMatrix.append(atom)
-        return np.array(featMatrix), solList
+        return solList
 
 
 
