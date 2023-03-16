@@ -186,13 +186,14 @@ class readprotein():
 
     def calculate_secondary_structure(self, coords):
         # Define the hydrogen bonding distance cutoffs for each type of interaction
-        hbond_cutoffs = {'helix': 4.6, 'sheet': 3.5}
+        # print(coords)
+        hbond_cutoffs = {'helix': 3.4, 'sheet': 3.2}
         
         # Define the angles for each type of secondary structure
         # helix_angles = {'C-alpha-C': 1.5, 'C-N-C-alpha': 2.0}
         # sheet_angles = {'C-alpha-C': 2.0, 'C-N-C-alpha': 1.5}
 
-        helix_angles = {'C-alpha-C': 57.8, 'C-N-C-alpha': 47}
+        helix_angles = {'phi': 92, 'psi': 98}
         sheet_angles = {'C-alpha-C': 139, 'C-N-C-alpha': 135}
         
         # Initialize the secondary structure assignment for each residue
@@ -204,35 +205,66 @@ class readprotein():
                 # print(coords[i]['N'], coords[j]['O'], np.linalg.norm(coords[i]['N'] - coords[j]['O']))
                 dist = np.linalg.norm(coords[i]['N'] - coords[j]['O'])
                 # print('dist:', dist)
-                if np.linalg.norm(coords[i]['N'] - coords[j]['O']) < hbond_cutoffs['helix']:
+                if np.linalg.norm(coords[i]['O'] - coords[j]['N']) < hbond_cutoffs['helix'] and (abs(coords[j]['R']-coords[i]['R']) >= 3 and abs(coords[j]['R']-coords[i]['R']) <= 5):
+                    print(coords[i]['R']+2, coords[j]['R']+2)
                     # Check if the angle between the C-alpha, C, and N atoms is within the helix range
-                    angle1 = self.calculate_angle(coords[i]['CA'], coords[i]['C'], coords[j]['N'])
-                    angle2 = self.calculate_angle(coords[j]['C'], coords[j]['N'], coords[i]['CA'])
+                    # angle1 = self.calculate_angle(coords[i]['CA'], coords[i]['C'], coords[i+1]['N'])
+                    # angle2 = self.calculate_angle(coords[j]['C'], coords[j]['N'], coords[i]['CA'])
                     # print(angle1, angle2)
+                    phi1 = self.calculate_angle(coords[i]['C'], coords[i]['N'], coords[i+1]['CA'], coords[i+1]['C'])
+                    psi1 = self.calculate_angle(coords[i]['N'], coords[i]['CA'], coords[i+1]['C'], coords[i+1]['N'])
+                    print(phi1, psi1)
+                    phi2 = self.calculate_angle(coords[i+1]['C'], coords[i+1]['N'], coords[i+2]['CA'], coords[i+2]['C'])
+                    psi2 = self.calculate_angle(coords[i+1]['N'], coords[i+1]['CA'], coords[i+2]['C'], coords[i+2]['N'])
+                    print(phi2, psi2)
+                    phi3 = self.calculate_angle(coords[i+2]['C'], coords[i+2]['N'], coords[i+3]['CA'], coords[i+3]['C'])
+                    psi3 = self.calculate_angle(coords[i+2]['N'], coords[i+2]['CA'], coords[i+3]['C'], coords[i+3]['N'])
+                    print(phi3, psi3)
                     # print(abs((angle1 - helix_angles['C-alpha-C'])/helix_angles['C-alpha-C']), abs((angle2 - helix_angles['C-N-C-alpha'])/helix_angles['C-N-C-alpha']))
-                    if abs((angle1 - helix_angles['C-alpha-C'])/helix_angles['C-alpha-C']) < 0.33 and abs((angle2 - helix_angles['C-N-C-alpha'])/helix_angles['C-N-C-alpha']) < 0.25:
+                    if abs((phi1 - helix_angles['phi'])/helix_angles['phi']) < 0.35 and abs((psi1 - helix_angles['psi'])/helix_angles['psi']) < 0.35:
                         sec_struct[i] = 'H'
-                        sec_struct[j] = 'H'
+                        sec_struct[i+1] = 'H'
+                        sec_struct[i+2] = 'H'
                 elif dist < hbond_cutoffs['sheet']:
                     # print('yes E')
                     # Check if the angle between the C-alpha, C, and N atoms is within the sheet range
-                    angle1 = self.calculate_angle(coords[i]['CA'], coords[i]['C'], coords[j]['N'])
-                    angle2 = self.calculate_angle(coords[j]['C'], coords[j]['N'], coords[i]['CA'])
-                    if abs((angle1 - sheet_angles['C-alpha-C'])/sheet_angles['C-alpha-C']) < 0.25 and abs((angle2 - sheet_angles['C-N-C-alpha'])/sheet_angles['C-N-C-alpha']) < 0.33:
+                    phi = self.calculate_angle(coords[i]['C'], coords[i]['N'], coords[i+1]['CA'], coords[i+1]['C'])
+                    psi = self.calculate_angle(coords[i]['N'], coords[i]['CA'], coords[i+1]['C'], coords[i+1]['N'])
+                    if abs((phi - sheet_angles['C-alpha-C'])/sheet_angles['C-alpha-C']) < 0.25 and abs((psi - sheet_angles['C-N-C-alpha'])/sheet_angles['C-N-C-alpha']) < 0.33:
                         sec_struct[i] = 'E'
                         sec_struct[j] = 'E'
         
         return sec_struct
 
+    def calculate_angle(self, p0, p1, p2, p3):
+        b0 = p0 - p1
+        b1 = p2 - p1
+        b2 = p3 - p2
+
+        # https://leimao.github.io/blog/Dihedral-Angles/
+
+        cos = np.dot(np.cross(b0, b1), np.cross(b1, b2))/(np.linalg.norm(np.cross(b0, b1)) * np.linalg.norm(np.cross(b1, b2)))
+        sin = np.dot(np.cross(np.cross(b0, b1), np.cross(b1, b2)), b1)/(np.linalg.norm(np.cross(b0, b1)) * np.linalg.norm(np.cross(b1, b2)) * np.linalg.norm(b1))
+
+        angle = np.arctan2(sin, cos)
+        angle = np.rad2deg(angle)
+
+        # b1 /= np.linalg.norm(b1)
+        # v = b0 - np.dot(b0, b1)*b1
+        # w = b2 - np.dot(b2, b1)*b1
+        # x = np.dot(v, w)
+        # y = np.dot(np.cross(b1, v), w)
+        # angle = np.degrees(np.arctan2(y, x))
+
+        return angle
 
 
-
-    def calculate_angle(self, p1, p2, p3):
-        v1 = p1 - p2
-        v2 = p3 - p2
-        cos_theta = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
-        theta = np.arccos(cos_theta)
-        return theta * 180 / np.pi
+    # def calculate_angle(self, p1, p2, p3):
+    #     v1 = p1 - p2
+    #     v2 = p3 - p2
+    #     cos_theta = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+    #     theta = np.arccos(cos_theta)
+    #     return theta * 180 / np.pi
 
 
 
