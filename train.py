@@ -26,7 +26,7 @@ import gnnclass as gnc
 
 
 # Step 2: Initialize the GNN model
-input_dim = 2
+input_dim = 47
 hidden_dim = 4
 output_dim = 1
 gnn_model = gnc.GNN(input_dim, hidden_dim, output_dim)
@@ -81,7 +81,9 @@ for file in os.listdir(rootdir): # This will get all the proteins inside the sc
         for i, j in zip(output.tolist(), solutions.tolist()):
             calculus += 1-abs(i[0]-j[0])
         accuracy += calculus/len(output.tolist())
+
         print(str(accuracy/iters)+'\n', file=sys.stderr)
+        
         iters += 1
         loss = criterion(output, solutions)
         optimizer.zero_grad()

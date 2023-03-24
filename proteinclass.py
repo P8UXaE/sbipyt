@@ -25,6 +25,13 @@ class readprotein():
     def numAtoms(self):
         return len(self.atoms())
     
+    def numAA(self):
+        num = 0
+        for i in self.atoms():
+            if i[6] != num:
+                num += 1
+        return num
+    
     def getNeighbors(self, atom, k=16):
         allNeighbors = []
         for i in self.atoms():
@@ -56,13 +63,23 @@ class readprotein():
 
         '''
         sasa = self.sasaList()
+        for i in range(0, len(sasa)):
+            sasa[i] = (sasa[i]-np.min(sasa))/(np.max(sasa)-np.min(sasa))
         data = self.getNeighbors(atom)
-        print(data)
+        # print(data)
         directions = self.directions(data)
         # eDensity = self.electronDensity(data)
         ljP = self.lj_potential(data)
         secondary = self.secondaryList()
-        print(secondary)
+        sec_number = []
+        # print('-'*10+'features'+'-'*10)
+        for i in secondary:
+            if i == '?': # Loop
+                sec_number.append('0')
+            if i == 'E': # Beta sheet
+                sec_number.append('1')
+            if i == 'H': # Alpha helix
+                sec_number.append('2')
         featMat = []
         for atomFeature, potential, direction in zip(data, ljP, directions):
             distance = atomFeature[1]
@@ -89,9 +106,25 @@ class readprotein():
             
             for i in direction:
                 atomFeature.append(i)
+            
+
+            # print(sec_number)
+            # print(atomFeature[6]-1, len(sec_number))
+            # print(sec_number[atomFeature[6]-1])
+            atomFeature.append(sec_number[atomFeature[6]-1])
+
+
+            ### DELETE ALL UNDESIRED ELEMENTS ###
+            del atomFeature[0:8]
 
 
 
+            ### CONVERT ALL ELEMENTS TO FLOAT ###
+            for i in  range(0, len(atomFeature)):
+                atomFeature[i] = float(atomFeature[i])
+
+
+            
 
 
 
@@ -116,7 +149,7 @@ class readprotein():
 
 
 
-            print(atomFeature)
+            # print(atomFeature)
 
 
             featMat.append(atomFeature)
@@ -180,19 +213,19 @@ class readprotein():
             sec = np.array([])
             for i in self.calculate_secondary_structure(self.coords()):
                 sec = np.append(sec, i)
+            while self.numAA() > len(sec):
+                sec = np.append(sec, '?')
+            # print(self.numAA())
+            # print(len(sec))
             self._secondary = sec
         return self._secondary
 
 
     def calculate_secondary_structure(self, coords):
         # Define the hydrogen bonding distance cutoffs for each type of interaction
-        # print(coords)
         hbond_cutoffs = {'helix': 3.4, 'sheet': 3.2}
         
         # Define the angles for each type of secondary structure
-        # helix_angles = {'C-alpha-C': 1.5, 'C-N-C-alpha': 2.0}
-        # sheet_angles = {'C-alpha-C': 2.0, 'C-N-C-alpha': 1.5}
-
         helix_angles = {'phi': 92, 'psi': 98}
         sheet_angles = {'C-alpha-C': 139, 'C-N-C-alpha': 135}
         
@@ -200,41 +233,73 @@ class readprotein():
         sec_struct = ['?' for i in range(len(coords))]
         
         # Iterate over each residue and compare its hydrogen bonding distance to adjacent residues
-        for i in range(len(coords)):
-            for j in range(i+1, len(coords)):
-                # print(coords[i]['N'], coords[j]['O'], np.linalg.norm(coords[i]['N'] - coords[j]['O']))
-                dist = np.linalg.norm(coords[i]['N'] - coords[j]['O'])
-                # print('dist:', dist)
-                if np.linalg.norm(coords[i]['O'] - coords[j]['N']) < hbond_cutoffs['helix'] and (abs(coords[j]['R']-coords[i]['R']) >= 3 and abs(coords[j]['R']-coords[i]['R']) <= 5):
-                    print(coords[i]['R']+2, coords[j]['R']+2)
-                    # Check if the angle between the C-alpha, C, and N atoms is within the helix range
-                    # angle1 = self.calculate_angle(coords[i]['CA'], coords[i]['C'], coords[i+1]['N'])
-                    # angle2 = self.calculate_angle(coords[j]['C'], coords[j]['N'], coords[i]['CA'])
-                    # print(angle1, angle2)
+        for i in range(len(coords)-3):
+            for j in range(i+1, len(coords)-3):
+                if (np.linalg.norm(coords[i]['O'] - coords[j]['N']) < hbond_cutoffs['helix'] and (abs(coords[j]['R']-coords[i]['R']) >= 3 and abs(coords[j]['R']-coords[i]['R']) <= 5)) or (np.linalg.norm(coords[i]['N'] - coords[j]['O']) < hbond_cutoffs['helix'] and (abs(coords[j]['R']-coords[i]['R']) >= 3 and abs(coords[j]['R']-coords[i]['R']) <= 5)):
+                    # print(coords[i]['R']+2, coords[j]['R']+2)
                     phi1 = self.calculate_angle(coords[i]['C'], coords[i]['N'], coords[i+1]['CA'], coords[i+1]['C'])
                     psi1 = self.calculate_angle(coords[i]['N'], coords[i]['CA'], coords[i+1]['C'], coords[i+1]['N'])
-                    print(phi1, psi1)
+                    # print(phi1, psi1)
                     phi2 = self.calculate_angle(coords[i+1]['C'], coords[i+1]['N'], coords[i+2]['CA'], coords[i+2]['C'])
                     psi2 = self.calculate_angle(coords[i+1]['N'], coords[i+1]['CA'], coords[i+2]['C'], coords[i+2]['N'])
-                    print(phi2, psi2)
+                    # print(phi2, psi2)
                     phi3 = self.calculate_angle(coords[i+2]['C'], coords[i+2]['N'], coords[i+3]['CA'], coords[i+3]['C'])
                     psi3 = self.calculate_angle(coords[i+2]['N'], coords[i+2]['CA'], coords[i+3]['C'], coords[i+3]['N'])
-                    print(phi3, psi3)
                     # print(abs((angle1 - helix_angles['C-alpha-C'])/helix_angles['C-alpha-C']), abs((angle2 - helix_angles['C-N-C-alpha'])/helix_angles['C-N-C-alpha']))
-                    if abs((phi1 - helix_angles['phi'])/helix_angles['phi']) < 0.35 and abs((psi1 - helix_angles['psi'])/helix_angles['psi']) < 0.35:
+                    if abs((phi1 - helix_angles['phi'])/helix_angles['phi']) < 0.35 and abs((psi1 - helix_angles['psi'])/helix_angles['psi']) < 0.35 and abs((phi2 - helix_angles['phi'])/helix_angles['phi']) < 0.35 and abs((psi2 - helix_angles['psi'])/helix_angles['psi']) < 0.35 and abs((phi3 - helix_angles['phi'])/helix_angles['phi']) < 0.35 and abs((psi3 - helix_angles['psi'])/helix_angles['psi']) < 0.35:
                         sec_struct[i] = 'H'
                         sec_struct[i+1] = 'H'
                         sec_struct[i+2] = 'H'
-                elif dist < hbond_cutoffs['sheet']:
-                    # print('yes E')
+        for i in range(len(coords)-1):
+            for j in range(i+1, len(coords)-1):
+                if (np.linalg.norm(coords[i]['O'] - coords[j]['N']) < hbond_cutoffs['sheet'] or np.linalg.norm(coords[i]['N'] - coords[j]['O']) < hbond_cutoffs['sheet']) and sec_struct[i+2] != 'H' and sec_struct[i+1] != 'H' and sec_struct[i] != 'H' and sec_struct[j] != 'H' and coords[j]['R'] != coords[i]['R']+1:
+                    # print('E?', coords[i]['R'], coords[j]['R'], np.linalg.norm(coords[i]['O'] - coords[j]['N']), np.linalg.norm(coords[i]['N'] - coords[j]['O']), sec_struct[i], sec_struct[j])
+                    if np.linalg.norm(coords[i]['O'] - coords[j]['N']) < np.linalg.norm(coords[i]['N'] - coords[j]['O']):
+                        cac = self.midpoint(coords[j-1]['C'], coords[j]['CA']) # Midpoint between CA and C
+                        hydrogen = self.placeH(coords[j]['N'], cac) # Place an hydrogen (prefectly geometric)
+                        angle = self.Hangle(coords[i]['O'], hydrogen, coords[j]['N'])
+                    else:
+                        cac = self.midpoint(coords[i-1]['C'], coords[i]['CA']) # Midpoint between CA and C
+                        hydrogen = self.placeH(coords[i]['N'], cac) # Place an hydrogen (prefectly geometric)
+                        angle = self.Hangle(coords[i]['N'], hydrogen, coords[j]['O'])
+                    # print('angle', angle)
                     # Check if the angle between the C-alpha, C, and N atoms is within the sheet range
                     phi = self.calculate_angle(coords[i]['C'], coords[i]['N'], coords[i+1]['CA'], coords[i+1]['C'])
                     psi = self.calculate_angle(coords[i]['N'], coords[i]['CA'], coords[i+1]['C'], coords[i+1]['N'])
-                    if abs((phi - sheet_angles['C-alpha-C'])/sheet_angles['C-alpha-C']) < 0.25 and abs((psi - sheet_angles['C-N-C-alpha'])/sheet_angles['C-N-C-alpha']) < 0.33:
+                    # print(phi, psi)
+                    # if abs((phi - sheet_angles['C-alpha-C'])/sheet_angles['C-alpha-C']) < 0.35 and abs((psi - sheet_angles['C-N-C-alpha'])/sheet_angles['C-N-C-alpha']) < 0.35:
+                    if abs((angle - 180)/180) < 0.15:
                         sec_struct[i] = 'E'
                         sec_struct[j] = 'E'
+        for i in range(1, len(sec_struct)-1):
+            if sec_struct[i] == '?' and sec_struct[i-1] == 'E' and sec_struct[i+1] == 'E':
+                sec_struct[i] = 'E'
+        # c = 1
+        # for i in sec_struct:
+        #     if i == 'E':
+        #         print('E', c)
+        #     if i == 'H':
+        #         print('H', c)
+        #     c+=1
         
         return sec_struct
+    
+    def placeH(self, n, mp):
+        direction = n-mp
+        h = n+direction
+        return h
+    
+    def midpoint(self, p1, p2):
+        return (p1+p2)/2
+
+    def Hangle(self, p0, p1, p2):
+        ba = p0 - p1
+        bc = p2 - p1
+        cos = np.dot(ba, bc)/(np.linalg.norm(ba) * np.linalg.norm(bc))
+        angle = np.arccos(cos)
+        angle = np.degrees(angle)
+
+        return angle
 
     def calculate_angle(self, p0, p1, p2, p3):
         b0 = p0 - p1
@@ -248,13 +313,6 @@ class readprotein():
 
         angle = np.arctan2(sin, cos)
         angle = np.rad2deg(angle)
-
-        # b1 /= np.linalg.norm(b1)
-        # v = b0 - np.dot(b0, b1)*b1
-        # w = b2 - np.dot(b2, b1)*b1
-        # x = np.dot(v, w)
-        # y = np.dot(np.cross(b1, v), w)
-        # angle = np.degrees(np.arctan2(y, x))
 
         return angle
 
