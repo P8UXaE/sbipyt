@@ -491,16 +491,18 @@ class Mol2ligand():
                 points.append([float(line[17:25]), float(line[27:35]), float(line[37:45])])
         return points
         
-    def SolutionsFeatureMatrix(self, matrix):
+    def SolutionsFeatureMatrix(self, matrix, sasa):
         solList = []
         for atom in matrix:
             atom = atom[0]
+            # print(atom)
             ligand = 0
             for cavity in self.points():
                 dist = math.sqrt((atom[2]-cavity[0])**2+(atom[3]-cavity[1])**2+(atom[4]-cavity[2])**2)
                 # print([atom[2],cavity[0],atom[3],cavity[1],atom[4],cavity[2]])
                 # print(dist)
-                if dist < 3.5:
+
+                if dist < 3.5 and sasa[atom[0]-1] > 0:
                     ligand = 1
                     break
             solList.append(ligand)

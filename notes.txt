@@ -89,3 +89,6 @@ The overall binding energy can be calculated by summing the van der Waals, elect
 where:
 
 ΔG_bind is the total binding energy of the ligand-protein complex.
+
+
+$ python Setup.py build_ext --inplace  --> This compiles the pyx file.

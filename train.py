@@ -63,7 +63,7 @@ for file in os.listdir(rootdir): # This will get all the proteins inside the sc
         adj_matrix = mol.adjacencyMatrix(mol.atoms()[i])
         molSol = proteinclass.Mol2ligand(rootdir+file+'/cavity6.mol2') # Get the molecule into the readMol2 class
         feature_matrix = mol.featureMatrix(mol.atoms()[i])
-        solutions = molSol.SolutionsFeatureMatrix(mol.getNeighbors(mol.atoms()[i]))
+        solutions = molSol.SolutionsFeatureMatrix(mol.getNeighbors(mol.atoms()[i]), mol.sasaList())
         # feature_matrix, solutions = molSol.SolutionsFeatureMatrix(mol.featureMatrix(mol.atoms()[i]))
         adj_matrix = torch.tensor(adj_matrix)
         feature_matrix = torch.tensor(feature_matrix)
