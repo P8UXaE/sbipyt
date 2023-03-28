@@ -7,7 +7,7 @@ from numba import njit
 from time import time
 from scipy.spatial import cKDTree
 # from angles import get_angles_and_atoms_3
-from small_sasa import ShrakeRupley
+from small_sasa import ShrakeRupley2
 
 mol = proteinclass.readMod2('scPDB/1iki_1/protein.mol2')
 
@@ -119,8 +119,9 @@ def spherical_to_cartesian(r, theta, phi):
 
 def get_angles_and_atoms_3(outside_points, angles_combination, radii, tree_coords):
     #radii_inside = radii[tree_coords.query(outside_points)[1]]
-    mask = tree_coords.query(outside_points)[0] <= radii[tree_coords.query(outside_points)[1]]
-    
+    # print(tree_coords.query(outside_points)[0], radii[tree_coords.query(outside_points)[1]]*2)
+    mask = tree_coords.query(outside_points)[0] <= radii[tree_coords.query(outside_points)[1]]*1.5
+    # print(mask)
     for ijk, m in zip(outside_points, mask):
         # print(ijk)
         if m:
@@ -128,28 +129,44 @@ def get_angles_and_atoms_3(outside_points, angles_combination, radii, tree_coord
             continue
 
 
-        # theta_collisions = []
-        # phi_collisions = []
-        # points = np.array([np.add(np.array(ijk), np.array(spherical_to_cartesian(d, t, p))) for t, p in angles_combination for d in range(1, 25)])
-        # for angle in angles_combination:
-        #     t = angle[0]
-        #     p = angle[1]
-        #     points = np.array([np.add(np.array(ijk), np.array(spherical_to_cartesian(d, t, p))) for d in range(1, 25)])
-        #     collisions = tree_coords.query(points)[0] <= radii[tree_coords.query(ijk)[1]]
-        #     if np.any(collisions):
-        #         theta_collisions.append(t)
-        #         phi_collisions.append(p)
+        theta_collisions = []
+        phi_collisions = []
+        points = np.array([np.add(np.array(ijk), np.array(spherical_to_cartesian(d, t, p))) for t, p in angles_combination for d in range(1, 25)])
+        for angle in angles_combination:
+            t = angle[0]
+            p = angle[1]
+            points = np.array([np.add(np.array(ijk), np.array(spherical_to_cartesian(d, t, p))) for d in range(1, 25)])
+            collisions = tree_coords.query(points)[0] <= radii[tree_coords.query(ijk)[1]]
+            if np.any(collisions):
+                theta_collisions.append(t)
+                phi_collisions.append(p)
         # print('Theta collision:', theta_collisions, 'Phi collision:', phi_collisions)
 
 
 
-        angles = []
-        # print(np.array([np.add(np.array(ijk), np.array([spherical_to_cartesian(d, t, p) for d in range(1, 20, 2)])) for t, p in angles_combination]))
-        mask2 = tree_coords.query(np.array([np.add(np.array(ijk), np.array([spherical_to_cartesian(d, t, p) for d in range(1, 20, 2)])) for t, p in angles_combination])) <= radii[tree_coords.query(ijk)[1]]
-        # print(mask2.flatten().tolist())
-        #sys.exit()
-        # if mask2:
-        angles.append(np.where(mask2.flatten()))
+
+        for start_angle in range(0, 181, 45):
+            end_angle = start_angle + 181
+            range_list = list(range(start_angle, end_angle, 45))
+            if all(elem in theta_collisions for elem in range_list):
+                for start_angle2 in range(0, 181, 45):
+                    end_angle2 = start_angle2 + 181
+                    range_list2 = list(range(start_angle2, end_angle2, 45))
+                    if all(elem in phi_collisions for elem in range_list2):
+                        print(ijk)
+                        break
+                        #print('yes')
+                        # print('Theta collision:', theta_collisions, 'Phi collision:', phi_collisions)
+
+
+
+        # angles = []
+        # # print(np.array([np.add(np.array(ijk), np.array([spherical_to_cartesian(d, t, p) for d in range(1, 20, 2)])) for t, p in angles_combination]))
+        # mask2 = tree_coords.query(np.array([np.add(np.array(ijk), np.array([spherical_to_cartesian(d, t, p) for d in range(1, 20, 2)])) for t, p in angles_combination])) <= radii[tree_coords.query(ijk)[1]]
+        # # print(mask2.flatten().tolist())
+        # #sys.exit()
+        # # if mask2:
+        # angles.append(np.where(mask2.flatten()))
         # print(angles)
 
 
@@ -231,7 +248,33 @@ maxDistanceConsideredBinding = 30
 # tree = cKDTree(coords)
 # get_angles_and_atoms_3(grid_points, angles_combination, radii, tree)
 
+# print(radii)
+# print(coords)
 
+sasa = ShrakeRupley2()
+sasa_values = np.array(sasa.compute(coords, radii))
+
+exposed_coords = []
+exposed_radii = []
+for s, c, r, sas in zip(sasa_values, coords, radii, sasa_values):
+    if sas >= 15:
+        exposed_coords.append(c.tolist())
+        exposed_radii.append(r)
+
+xs = [-3, 0, 3]
+ys = [-3, 0, 3]
+zs = [-3, 0, 3]
+x = [-4,0,4]
+grid_sasa_points = np.array(list(itertools.product(x,x,x))) # Generate all the grid points
+# print(grid_sasa_points)
+surface_grid = []
+for ec in exposed_coords:
+    for gsp in grid_sasa_points:
+        surface_grid.append(np.add(np.array(ec), gsp))
+
+surface_grid = np.array(surface_grid)
+tree = cKDTree(coords)
+get_angles_and_atoms_3(surface_grid, angles_combination, radii, tree)
 
 
 

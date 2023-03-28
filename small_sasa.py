@@ -32,7 +32,7 @@ ATOMIC_RADII.update(
 )
 
 
-class ShrakeRupley:
+class ShrakeRupley2:
     """Calculates SASAs using the Shrake-Rupley algorithm."""
 
 
@@ -117,7 +117,7 @@ class ShrakeRupley:
         return coords
 
 
-    def compute(self, atoms):
+    def compute(self, coords, radii):
         """Calculate surface accessibility surface area for an entity.
 
 
@@ -130,8 +130,8 @@ class ShrakeRupley:
         :param entity: input entity.
         """
         # Get atoms and coords
-        n_atoms = len(atoms)
-        coords = np.array([a[2:5] for a in atoms], dtype=np.float64)
+        n_atoms = len(coords)
+        # coords = np.array([a[2:5] for a in atoms], dtype=np.float64)
 
 
         # Pre-compute atom neighbors using KDTree
@@ -139,8 +139,8 @@ class ShrakeRupley:
 
 
         # Pre-compute radius * probe table
-        radii_dict = self.radii_dict
-        radii = np.array([radii_dict[str(a[5].split('.')[0]).upper()] for a in atoms], dtype=np.float64)
+        # radii_dict = self.radii_dict
+        # radii = np.array([radii_dict[str(a[5].split('.')[0]).upper()] for a in atoms], dtype=np.float64)
         radii += self.probe_radius
         twice_maxradii = np.max(radii) * 2
 
@@ -185,6 +185,6 @@ class ShrakeRupley:
 
         # Set atom .sasa
         sasa = []
-        for i, atom in enumerate(atoms):
+        for i, atom in enumerate(coords):
             sasa.append(asa_array[i, 0])
         return sasa
