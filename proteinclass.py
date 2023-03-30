@@ -5,6 +5,9 @@ from ctypes import *
 from Bio.PDB.kdtrees import KDTree
 import pyscf
 import chemistry as chem
+from scipy.spatial import cKDTree
+import itertools
+from numba import njit
 
 
 class readprotein():
@@ -53,6 +56,122 @@ class readprotein():
                         matrix[i,j] = 1
         return matrix
     
+
+    
+    def geometric_binding(self):
+        @njit
+        def spherical_to_cartesian(r, theta, phi):
+            theta = theta/180*math.pi
+            phi = phi/180*math.pi
+            x = r * math.sin(theta) * math.cos(phi)
+            y = r * math.sin(theta) * math.sin(phi)
+            z = r * math.cos(theta)
+            x = round(x, 3)
+            y = round(y, 3)
+            z = round(z, 3)
+            return np.array([x, y, z])
+        
+        radii_dict = {
+            "H": 1.200,
+            "HE": 1.400,
+            "C": 1.700,
+            "N": 1.550,
+            "O": 1.520,
+            "F": 1.470,
+            "NA": 2.270,
+            "MG": 1.730,
+            "P": 1.800,
+            "S": 1.800,
+            "CL": 1.750,
+            "K": 2.750,
+            "CA": 2.310,
+            "NI": 1.630,
+            "CU": 1.400,
+            "ZN": 1.390,
+            "SE": 1.900,
+            "BR": 1.850,
+            "CD": 1.580,
+            "I": 1.980,
+            "HG": 1.550,
+        }
+        coords = []
+        radii = []
+        for i in self.atoms():
+            coords.append([float(i[2]), float(i[3]), float(i[4])])
+            radii.append(radii_dict[i[5].split('.')[0]])
+        coords = np.array(coords)
+        radii = np.array(radii)
+        # return coords, radii
+        # return self.data()
+
+        theta = list(range(0, 361, 30))
+        phi = list(range(0, 361, 30))
+        angles_combination = np.array(list(itertools.product(theta, phi)))
+        # print(angles_combination)
+        visited_angles = []
+        unique_angles = []
+        for angle in angles_combination:
+            t = angle[0]
+            p = angle[1]
+            #### Do not repeat same direction vectors ####
+            if spherical_to_cartesian(1, t, p).tolist() not in visited_angles:
+                visited_angles.append(spherical_to_cartesian(1, t, p).tolist())
+                unique_angles.append([t, p])
+            else:
+                pass
+            #### END BLOCK ####
+        angles_combination = unique_angles
+
+        sasa = ShrakeRupley2()
+        sasa_values = np.array(sasa.compute(coords, radii))
+
+        exposed_coords = []
+        exposed_radii = []
+        for c, r, sas in zip(coords, radii, sasa_values):
+            if sas >= 0:
+                exposed_coords.append(c.tolist())
+                exposed_radii.append(r)
+
+        x = [-2,0,2]
+        grid_sasa_points = np.array(list(itertools.product(x,x,x))) # Generate all the grid points
+        surface_grid = []
+        for ec in exposed_coords:
+            for gsp in grid_sasa_points:
+                surface_grid.append(np.round(np.add(np.array(ec), gsp), decimals=0))
+
+        surface_grid = np.unique(np.array(surface_grid), axis=0)
+        tree = cKDTree(coords)
+
+        pocket_points = []
+        n = 1
+        mask = tree.query(surface_grid)[0] <= radii[tree.query(surface_grid)[1]]
+        for ijk, m in zip(surface_grid, mask):
+            if m:
+                continue
+            theta_collisions = []
+            phi_collisions = []
+            for angle in angles_combination:
+                t = angle[0]
+                p = angle[1]
+                points = np.array([np.add(np.array(ijk), np.array(spherical_to_cartesian(d, t, p))) for d in range(2, 15)])
+                collisions = tree.query(points)[0] <= radii[tree.query(ijk)[1]]
+                if np.any(collisions):
+                    theta_collisions.append(t)
+                    phi_collisions.append(p)
+            for start_angle in range(0, 181, 30):
+                end_angle = start_angle + 181
+                range_list = list(range(start_angle, end_angle, 30))
+                if all(elem in theta_collisions for elem in range_list):
+                    for start_angle2 in range(0, 121, 30):
+                        end_angle2 = start_angle2 + 241
+                        range_list2 = list(range(start_angle2, end_angle2, 30))
+                        if all(elem in phi_collisions for elem in range_list2):
+                            ijk = np.round(ijk, decimals=3)
+                            pocket_points.append(ijk)
+                            n += 1
+                            break
+        return cKDTree(pocket_points)
+    
     def featureMatrix(self, atom):
         '''
         Get the feature Matrix for the atom and its neighbors.
@@ -62,6 +181,7 @@ class readprotein():
 
 
         '''
+        # pocket_tree = self.geometric_binding()
         sasa = self.sasaList()
         for i in range(0, len(sasa)):
             sasa[i] = (sasa[i]-np.min(sasa))/(np.max(sasa)-np.min(sasa))
@@ -154,7 +274,7 @@ class readprotein():
 
             featMat.append(atomFeature)
 
-
+        print(featMat)
         return featMat
 
 
@@ -359,6 +479,8 @@ class readprotein():
 
 
     #     return data
+
+    
 
 
     def lj_potential(self, data):
@@ -695,5 +817,162 @@ class ShrakeRupley:
         # Set atom .sasa
         sasa = []
         for i, atom in enumerate(atoms):
+            sasa.append(asa_array[i, 0])
+        return sasa
+
+class ShrakeRupley2:
+    """Calculates SASAs using the Shrake-Rupley algorithm."""
+
+
+    def __init__(self, probe_radius=1.40, n_points=960, radii_dict=None):
+        """Initialize the class.
+
+
+        :param probe_radius: radius of the probe in A. Default is 1.40, roughly
+            the radius of a water molecule.
+        :type probe_radius: float
+
+
+        :param n_points: resolution of the surface of each atom. Default is 100.
+            A higher number of points results in more precise measurements, but
+            slows down the calculation.
+        :type n_points: int
+
+
+        :param radii_dict: user-provided dictionary of atomic radii to use in
+            the calculation. Values will replace/complement those in the
+            default ATOMIC_RADII dictionary.
+        :type radii_dict: dict
+
+
+        >>> sr = ShrakeRupley()
+        >>> sr = ShrakeRupley(n_points=960)
+        >>> sr = ShrakeRupley(radii_dict={"O": 3.1415})
+        """
+        if probe_radius <= 0.0:
+            raise ValueError(
+                f"Probe radius must be a positive number: {probe_radius} <= 0"
+            )
+        self.probe_radius = float(probe_radius)
+
+
+        if n_points < 1:
+            raise ValueError(
+                f"Number of sphere points must be larger than 1: {n_points}"
+            )
+        self.n_points = n_points
+
+
+        # Update radii list with user provided lists.
+        self.radii_dict = ATOMIC_RADII.copy()
+        if radii_dict is not None:
+            self.radii_dict.update(radii_dict)
+
+
+        # Pre-compute reference sphere
+        self._sphere = self._compute_sphere()
+
+
+    def _compute_sphere(self):
+        """Return the 3D coordinates of n points on a sphere.
+
+
+        Uses the golden spiral algorithm to place points 'evenly' on the sphere
+        surface. We compute this once and then move the sphere to the centroid
+        of each atom as we compute the ASAs.
+        """
+        n = self.n_points
+
+
+        dl = np.pi * (3 - 5**0.5)
+        dz = 2.0 / n
+
+
+        longitude = 0
+        z = 1 - dz / 2
+
+
+        coords = np.zeros((n, 3), dtype=np.float32)
+        for k in range(n):
+            r = (1 - z * z) ** 0.5
+            coords[k, 0] = math.cos(longitude) * r
+            coords[k, 1] = math.sin(longitude) * r
+            coords[k, 2] = z
+            z -= dz
+            longitude += dl
+
+
+        return coords
+
+
+    def compute(self, coords, radii):
+        """Calculate surface accessibility surface area for an entity.
+
+
+        The resulting atomic surface accessibility values are attached to the
+        .sasa attribute of each entity (or atom), depending on the level. For
+        example, if level="R", all residues will have a .sasa attribute. Atoms
+        will always be assigned a .sasa attribute with their individual values.
+
+
+        :param entity: input entity.
+        """
+        # Get atoms and coords
+        n_atoms = len(coords)
+        # coords = np.array([a[2:5] for a in atoms], dtype=np.float64)
+
+
+        # Pre-compute atom neighbors using KDTree
+        kdt = KDTree(coords, 10)
+
+
+        # Pre-compute radius * probe table
+        # radii_dict = self.radii_dict
+        # radii = np.array([radii_dict[str(a[5].split('.')[0]).upper()] for a in atoms], dtype=np.float64)
+        radii += self.probe_radius
+        twice_maxradii = np.max(radii) * 2
+
+
+        # Calculate ASAa
+        asa_array = np.zeros((n_atoms, 1), dtype=np.int64)
+        ptset = set(range(self.n_points))
+        for i in range(n_atoms):
+            r_i = radii[i]
+
+
+            # Move sphere to atom
+            s_on_i = (np.array(self._sphere, copy=True) * r_i) + coords[i]
+            available_set = ptset.copy()
+
+
+            # KDtree for sphere points
+            kdt_sphere = KDTree(s_on_i, 10)
+
+
+            # Iterate over neighbors of atom i
+            for jj in kdt.search(coords[i], twice_maxradii):
+                j = jj.index
+                if i == j:
+                    continue
+
+
+                if jj.radius < (r_i + radii[j]):
+                    # Remove overlapping points on sphere from available set
+                    available_set -= {
+                        pt.index for pt in kdt_sphere.search(coords[j], radii[j])
+                    }
+
+
+            asa_array[i] = len(available_set)  # update counts
+
+
+        # Convert accessible point count to surface area in A**2
+        f = radii * radii * (4 * np.pi / self.n_points)
+        asa_array = asa_array * f[:, np.newaxis]
+
+
+        # Set atom .sasa
+        sasa = []
+        for i, atom in enumerate(coords):
             sasa.append(asa_array[i, 0])
         return sasa
