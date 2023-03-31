@@ -26,7 +26,7 @@ import gnnclass as gnc
 
 
 # Step 2: Initialize the GNN model
-input_dim = 47
+input_dim = 57
 hidden_dim = 4
 output_dim = 1
 gnn_model = gnc.GNN(input_dim, hidden_dim, output_dim)

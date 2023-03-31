@@ -71,41 +71,48 @@ class readprotein():
             y = round(y, 3)
             z = round(z, 3)
             return np.array([x, y, z])
+        def cap_area(theta, phi=2*np.pi):
+            '''
+            theta goes from 0 - π , 0 - 180
+            phi goes from 0 - 2π , 0 - 360
+            cap_area(np.pi/4, np.pi)
+            '''
+            a = (2*np.pi*(1-np.cos(theta)))*phi/(2*np.pi)
+            return a
+        def segment_area(theta1, theta2, phi):
+            '''
+            phi
+            theta2 - theta1, theta1, theta2 != 0, 180
+            segment_area(np.pi/4, np.pi/2, np.pi)
+            '''
+            a2 = (2*np.pi*(1-np.cos(theta2)))
+            a1 = (2*np.pi*(1-np.cos(theta1)))
+            a = (a2-a1)*phi/(2*np.pi)
+            return a
 
         coords = []
         radii = []
         for i in self.atoms():
             coords.append([float(i[2]), float(i[3]), float(i[4])])
-            # radii.append(radii_dict[i[5].split('.')[0]])
             radii.append(ATOMIC_RADII[i[5].split('.')[0].upper()])
         coords = np.array(coords)
         radii = np.array(radii)
-        # return coords, radii
-        # return self.data()
 
         theta = list(range(0, 361, 45))
         phi = list(range(0, 361, 45))
         angles_combination = np.array(list(itertools.product(theta, phi)))
-        # print(angles_combination)
         visited_angles = []
         unique_angles = []
         for angle in angles_combination:
             t = angle[0]
             p = angle[1]
-            #### Do not repeat same direction vectors ####
             if spherical_to_cartesian(1, t, p).tolist() not in visited_angles:
                 visited_angles.append(spherical_to_cartesian(1, t, p).tolist())
                 unique_angles.append([t, p])
             else:
                 pass
-            #### END BLOCK ####
         angles_combination = unique_angles
-
         sasa_values = self.sasaList()
-        # print(sasa)
-
-        # sasa = ShrakeRupley2()
-        # sasa_values = np.array(sasa.compute(coords, radii))
         exposed_coords = []
         exposed_radii = []
         for c, r, sas in zip(coords, radii, sasa_values):
@@ -121,80 +128,56 @@ class readprotein():
                 surface_grid.append(np.round(np.add(np.array(ec), gsp), decimals=0))
 
         surface_grid = np.unique(np.array(surface_grid), axis=0)
-        tree = cKDTree(coords)
+        tree_coords = cKDTree(coords)
 
+        mask = tree_coords.query(surface_grid)[0] <= radii[tree_coords.query(surface_grid)[1]]
         pocket_points = []
-        n = 1
-        mask = tree.query(surface_grid)[0] <= radii[tree.query(surface_grid)[1]]
+        for ijk, m in zip(surface_grid, mask):
+            if m:
+                continue
+            theta_collisions = []
+            phi_collisions = []
+            for angle in angles_combination:
+                t = angle[0]
+                p = angle[1]
+                points = np.array([np.add(np.array(ijk), np.array(spherical_to_cartesian(d, t, p))) for d in range(2, 15)])
+                collisions = tree_coords.query(points)[0] <= radii[tree_coords.query(points)[1]]
+                if np.any(collisions):
+                    theta_collisions.append(t)
+                    phi_collisions.append(p)
 
-        print(mask)
+            pairs = np.array([(t, p) for t, p in zip(theta_collisions, phi_collisions)])
+            surface = 0
+            for th in pairs:
+                if 45 <= th[0] <= 90:
+                    square_opp_corner = np.add(th, np.array([45, 45]))
+                    if square_opp_corner[1] == 360:
+                        square_opp_corner[1] = 0
+                    if np.any(np.all(pairs == square_opp_corner, axis=1)):
+                        surface += segment_area(th[0]*np.pi/180, square_opp_corner[0]*np.pi/180, np.pi/4)
+                if abs(th[0]) == 0:
+                    side_corner = [np.any(np.all(pairs == np.add(th, np.array([45, x])), axis=1)) for x in range(0, 360, 45)]
+                    for i in range(len(side_corner)-1):
+                        if side_corner[i] == True and side_corner[i+1] == True:
+                            surface += cap_area(np.pi/4, np.pi/4)
+                    if side_corner[0] == True and side_corner[7] == True:
+                        surface += cap_area(np.pi/4, np.pi/4)
+                if abs(th[0]) == 180:
+                    side_corner = [np.any(np.all(pairs == np.add(th, np.array([-45, x])), axis=1)) for x in range(0, 360, 45)]
+                    for i in range(len(side_corner)-1):
+                        if side_corner[i] == True and side_corner[i+1] == True:
+                            surface += cap_area(np.pi/4, np.pi/4)
+                    if side_corner[0] == True and side_corner[7] == True:
+                        surface += cap_area(np.pi/4, np.pi/4)
 
-        surface_grid = surface_grid[np.where(~mask)]
+            if surface >= 2*np.pi:
+                # print("The points cover at least half of the sphere.", surface)
+                pocket_points.append(ijk)
+            else:
+                pass
+                # print("The points do not cover at least half of the sphere.")
 
-        print(surface_grid)
-
-        # for ijk, m in zip(surface_grid, mask):
-        #     if m:
-        #         continue
-        #     theta_collisions = []
-        #     phi_collisions = []
-        #     for angle in angles_combination:
-        #         t = angle[0]
-        #         p = angle[1]
-        #         points = np.array([np.add(np.array(ijk), np.array(spherical_to_cartesian(d, t, p))) for d in range(2, 15)])
-        #         collisions = tree.query(points)[0] <= radii[tree.query(ijk)[1]]
-        #         if np.any(collisions):
-        #             theta_collisions.append(t)
-        #             phi_collisions.append(p)
-        #     for start_angle in range(0, 181, 30):
-        #         end_angle = start_angle + 181
-        #         range_list = list(range(start_angle, end_angle, 30))
-        #         if all(elem in theta_collisions for elem in range_list):
-        #             for start_angle2 in range(0, 121, 30):
-        #                 end_angle2 = start_angle2 + 241
-        #                 range_list2 = list(range(start_angle2, end_angle2, 30))
-        #                 if all(elem in phi_collisions for elem in range_list2):
-        #                     ijk = np.round(ijk, decimals=3)
-        #                     pocket_points.append(ijk)
-        #                     print(ijk, start_angle, start_angle2)
-        #                     n += 1
-        #                     break
-        
-
-
-        # Compute queries for all points
-        # dists, indices = tree.query(np.array([np.add(np.array(surface_grid), np.array(spherical_to_cartesian(d, t, p))) for d in range(4, 15) for t, p in angles_combination]))
-
-        # for i, (ijk, m) in enumerate(zip(surface_grid, mask)):
-        #     if m:
-        #         continue
-        #     theta_collisions = set()
-        #     phi_collisions = set()
-        #     for j, (t, p) in enumerate(angles_combination):
-        #         collisions = dists[(j * 13):((j + 1) * 13)] <= radii[indices[(j * 13):((j + 1) * 13)]]
-        #         if np.any(collisions):
-        #             theta_collisions.add(t)
-        #             phi_collisions.add(p)
-        #     for start_angle in range(0, 181, 30):
-        #         end_angle = start_angle + 181
-        #         range_set = set(range(start_angle, end_angle, 30))
-        #         if range_set.issubset(theta_collisions):
-        #             for start_angle2 in range(0, 121, 30):
-        #                 end_angle2 = start_angle2 + 241
-        #                 range_set2 = set(range(start_angle2, end_angle2, 30))
-        #                 if range_set2.issubset(phi_collisions):
-        #                     ijk = np.round(ijk, decimals=3)
-        #                     pocket_points.append(ijk)
-        #                     print(ijk, start_angle, start_angle2)
-        #                     n += 1
-        #                     break
-
-
-
-
-
-
-        return cKDTree(pocket_points)
+        return cKDTree(np.array(pocket_points))
     
     def pocketTree(self):
         if self._pocket_tree is None:
@@ -212,8 +195,6 @@ class readprotein():
         '''
 
         pocket_tree = self.pocketTree()
-
-        print(pocket_tree)
 
         sasa = self.sasaList()
         for i in range(0, len(sasa)):
@@ -266,10 +247,14 @@ class readprotein():
             # print(sec_number[atomFeature[6]-1])
             atomFeature.append(sec_number[atomFeature[6]-1])
 
+            distances, indices = pocket_tree.query(np.array([atomFeature[2], atomFeature[3], atomFeature[4]]), k=10)
+
+            for i in distances:
+                atomFeature.append(i)
+
 
             ### DELETE ALL UNDESIRED ELEMENTS ###
             del atomFeature[0:8]
-
 
 
             ### CONVERT ALL ELEMENTS TO FLOAT ###
@@ -298,7 +283,7 @@ class readprotein():
 
             featMat.append(atomFeature)
 
-        print(featMat)
+        # print(featMat)
         return featMat
 
 
