@@ -6,6 +6,7 @@ import gnnclass as gnc
 import proteinclass
 from tqdm import tqdm
 import numpy as np
+import torch.nn as nn
 
 
 
@@ -34,11 +35,27 @@ if __name__=='__main__':
     ######################################################
             ## INITIALIZATE GNN MODEL ##
     ######################################################
-    input_dim = 57
+    class MLP(nn.Module):
+        def __init__(self, input_dim, hidden_dim, output_dim):
+            super(MLP, self).__init__()
+            self.fc1 = nn.Linear(input_dim, hidden_dim)
+            self.fc2 = nn.Linear(hidden_dim, output_dim)
+            self.act = nn.ReLU()
+            self.sigmoid = nn.Sigmoid()
+
+        def forward(self, x):
+            x = self.fc1(x)
+            x = self.act(x)
+            x = self.fc2(x)
+            x = self.sigmoid(x)
+            return x
+	
+    input_dim = 912
     hidden_dim = 4
     output_dim = 1
-    gnn_model = gnc.GNN(input_dim, hidden_dim, output_dim)
-    gnn_model.load_state_dict(torch.load('gnn_model.pth'))
+    mlp_model = MLP(input_dim, hidden_dim, output_dim)
+    
+    mlp_model.load_state_dict(torch.load('gnn_model2.pth'))
 
 
     ######################################################
@@ -61,26 +78,26 @@ if __name__=='__main__':
     solutions_probability = {} # Structure: residue - atom - sasa, solution
     numAtoms = mol.numAtoms()
     for i in tqdm(range(numAtoms), desc="Generating Matrices...", file=sys.stdout):
-        adj_matrix = mol.adjacencyMatrix(mol.atoms()[i])
         feature_matrix = mol.featureMatrix(mol.atoms()[i])
-        adj_matrix = torch.tensor(adj_matrix)
-        feature_matrix = torch.tensor(feature_matrix)
-        adj_matrix = adj_matrix.to(dtype=torch.float32)
-        feature_matrix = feature_matrix.to(dtype=torch.float32)
-        # print(adj_matrix, feature_matrix)
-        output = gnn_model(feature_matrix, adj_matrix)
-        c = 0
-        for calc, neigh, sol in zip(feature_matrix.tolist(), mol.getNeighbors(mol.atoms()[i]), output.tolist()):
-            neigh = neigh[0]
-            sas = calc[1]
-            sol = sol[0]
-            solutions_probability.setdefault(neigh[6], {})
-            solutions_probability[neigh[6]].setdefault(neigh[0], {})
-            solutions_probability[neigh[6]][neigh[0]]['sasa'] = sas
-            solutions_probability[neigh[6]][neigh[0]]['solution'+str(c)] = sol
-            solutions_probability[neigh[6]][neigh[0]]['position'] = [neigh[2], neigh[3], neigh[4]]
-            c += 1
-            
+        feature_matrix = [item for feature in feature_matrix for item in feature]
+        feature_matrix = torch.tensor(feature_matrix, requires_grad=True)
+        output = mlp_model(feature_matrix)
+        output = output.item()
+
+        # print(mol.getNeighbors(mol.atoms()[i]))
+
+        residue = mol.getNeighbors(mol.atoms()[i])[0][0][6]
+        atom = mol.getNeighbors(mol.atoms()[i])[0][0][0]
+        x = mol.getNeighbors(mol.atoms()[i])[0][0][2]
+        y = mol.getNeighbors(mol.atoms()[i])[0][0][3]
+        z = mol.getNeighbors(mol.atoms()[i])[0][0][4]
+
+        solutions_probability.setdefault(residue, {})
+        solutions_probability[residue].setdefault(atom, {})
+
+        solutions_probability[residue][atom]['sasa'] = feature_matrix.tolist()[1]
+        solutions_probability[residue][atom]['solution'] = output
+        solutions_probability[residue][atom]['position'] = [x, y, z]
             
     print(solutions_probability)
     
