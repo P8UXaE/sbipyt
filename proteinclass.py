@@ -13,7 +13,6 @@ from numba import njit
 class readprotein():
    # __slots__=['_file']
 
-
     def __init__(self, file):
         self._file = file
         self._sasa = None
@@ -21,15 +20,20 @@ class readprotein():
         self._secondary = None
         self._pocket_tree = None
 
-
     def data(self):
         with open(self._file, 'r') as f:
             yield from f
     
     def numAtoms(self):
+        '''
+        Protein atom length
+        '''
         return len(self.atoms())
     
     def numAA(self):
+        '''
+        Get number of residues in the protein
+        '''
         num = 0
         for i in self.atoms():
             if i[6] != num:
@@ -37,31 +41,52 @@ class readprotein():
         return num
     
     def getNeighbors(self, atom, k=16):
+        '''
+        Get the 16 nearest neighbors of an atom, including the atom itself
+        '''
         allNeighbors = []
         for i in self.atoms():
             allNeighbors.append((i, self.calculateDistance(i, atom)))
-        sorted_list = sorted(allNeighbors, key=lambda x: x[1])
-        return [x for x in sorted_list[:k]]
+        sorted_list = sorted(allNeighbors, key=lambda x: x[1]) # Get the distances sorted
+        return [x for x in sorted_list[:k]] # Return the kth first elements of the sorted list
 
 
     def calculateDistance(self, a1, a2):
+        '''
+        Calculates the distance between 2 atoms
+        '''
         return math.sqrt((a1[2]-a2[2])**2+(a1[3]-a2[3])**2+(a1[4]-a2[4])**2)
     
     def adjacencyMatrix(self, atom):
+        '''
+        If applying a Graph Neural Network.
+        This returns a k by k matrix with 0's and 1's. 1's mean the distance
+        between the atoms is equal or less than 1.55
+        '''
         kNeighbors = self.getNeighbors(atom)
-        matrix = np.zeros((len(kNeighbors), len(kNeighbors)))
+        matrix = np.zeros((len(kNeighbors), len(kNeighbors))) # Get a k by k matrix filled with 0
         for i in range(len(kNeighbors)):
             for j in range(len(kNeighbors)):
                 if kNeighbors[i] != kNeighbors[j]:
                     if self.calculateDistance(kNeighbors[i][0], kNeighbors[j][0]) <= 1.55:
-                        matrix[i,j] = 1
+                        matrix[i,j] = 1 # Change 0 by 1 in case the distance between atoms is less than 1.55
         return matrix
     
-
-    
     def geometric_binding(self):
+        '''
+        Returns a KDTree object.
+        This object is filled with all the points found that are inside a
+        protein pocket.
+        From SASA>0 atoms, a 9x9 grid around it with dots placed every 3A
+        finds collisions with the other atoms of the protein. This 
+        algorithm is computationally expensive, so it takes some time to
+        run.
+        '''
         @njit
         def spherical_to_cartesian(r, theta, phi):
+            '''
+            Optimized spherical to cartesian function with njit decorator
+            '''
             theta = theta/180*math.pi
             phi = phi/180*math.pi
             x = r * math.sin(theta) * math.cos(phi)
@@ -92,14 +117,14 @@ class readprotein():
 
         coords = []
         radii = []
-        for i in self.atoms():
+        for i in self.atoms(): # Get all the coordinates and radii of all the atoms
             coords.append([float(i[2]), float(i[3]), float(i[4])])
             radii.append(ATOMIC_RADII[i[5].split('.')[0].upper()])
         coords = np.array(coords)
         radii = np.array(radii)
 
-        theta = list(range(0, 361, 45))
-        phi = list(range(0, 361, 45))
+        theta = list(range(0, 361, 45)) # Generate theta list
+        phi = list(range(0, 361, 45)) # Generate phi list
         angles_combination = np.array(list(itertools.product(theta, phi)))
         visited_angles = []
         unique_angles = []
@@ -111,14 +136,15 @@ class readprotein():
                 unique_angles.append([t, p])
             else:
                 pass
-        angles_combination = unique_angles
+        angles_combination = unique_angles  # This contains all the vectors with modulus 1 that go in every direction
+                                            # with 45º difference around the dots.
         sasa_values = self.sasaList()
         exposed_coords = []
-        exposed_radii = []
+        # exposed_radii = []
         for c, r, sas in zip(coords, radii, sasa_values):
-            if sas >= 0:
-                exposed_coords.append(c.tolist())
-                exposed_radii.append(r)
+            if sas > 0:
+                exposed_coords.append(c.tolist()) # Get the coordinates of the atoms that have SASA>0
+                # exposed_radii.append(r) # Append the radii of the atoms that have SASA>0
 
         x = [-3,0,3]
         grid_sasa_points = np.array(list(itertools.product(x,x,x))) # Generate all the grid points
@@ -127,10 +153,10 @@ class readprotein():
             for gsp in grid_sasa_points:
                 surface_grid.append(np.round(np.add(np.array(ec), gsp), decimals=0))
 
-        surface_grid = np.unique(np.array(surface_grid), axis=0)
-        tree_coords = cKDTree(coords)
+        surface_grid = np.unique(np.array(surface_grid), axis=0) # Get the unique combinations
+        tree_coords = cKDTree(coords) # cKDtree object with the coordinates of the protein atoms
 
-        mask = tree_coords.query(surface_grid)[0] <= radii[tree_coords.query(surface_grid)[1]]
+        mask = tree_coords.query(surface_grid)[0] <= radii[tree_coords.query(surface_grid)[1]] # True/False
         pocket_points = []
         for ijk, m in zip(surface_grid, mask):
             if m:
@@ -160,7 +186,7 @@ class readprotein():
                     for i in range(len(side_corner)-1):
                         if side_corner[i] == True and side_corner[i+1] == True:
                             surface += cap_area(np.pi/4, np.pi/4)
-                    if side_corner[0] == True and side_corner[7] == True:
+                    if side_corner[0] == True and side_corner[7] == True: # Check if the 0º and 315º are true
                         surface += cap_area(np.pi/4, np.pi/4)
                 if abs(th[0]) == 180:
                     side_corner = [np.any(np.all(pairs == np.add(th, np.array([-45, x])), axis=1)) for x in range(0, 360, 45)]
@@ -444,52 +470,6 @@ class readprotein():
         angle = np.rad2deg(angle)
 
         return angle
-
-
-    # def calculate_angle(self, p1, p2, p3):
-    #     v1 = p1 - p2
-    #     v2 = p3 - p2
-    #     cos_theta = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
-    #     theta = np.arccos(cos_theta)
-    #     return theta * 180 / np.pi
-
-
-
-
-
-
-    # def electronDensity(self, data):
-    #     dataStr = ''
-    #     for i in data:
-    #         goodData = [i[0][5].split('.')[0], str(i[0][2]), str(i[0][3]), str(i[0][4])]
-    #         print(goodData)
-    #         dataStr += '  '.join(goodData) + '\n'
-    #     print(dataStr)
-    #     mol = pyscf.gto.M(atom=dataStr, basis='sto-3g')
-
-
-
-
-    #     # Compute the molecular orbitals
-    #     mf = pyscf.scf.RHF(mol)
-    #     mf.kernel()
-
-
-    #     # Compute the electron density matrix
-    #     dm = mf.make_rdm1()
-
-
-    #     # Compute the electron density of each atom
-    #     electron_density = mol.atom_charges()[:, None] - dm.diagonal()
-
-
-    #     for i in electron_density:
-    #         print(len(i), i)
-
-
-    #     return data
-
-    
 
 
     def lj_potential(self, data):
@@ -826,162 +806,5 @@ class ShrakeRupley:
         # Set atom .sasa
         sasa = []
         for i, atom in enumerate(atoms):
-            sasa.append(asa_array[i, 0])
-        return sasa
-
-class ShrakeRupley2:
-    """Calculates SASAs using the Shrake-Rupley algorithm."""
-
-
-    def __init__(self, probe_radius=1.40, n_points=960, radii_dict=None):
-        """Initialize the class.
-
-
-        :param probe_radius: radius of the probe in A. Default is 1.40, roughly
-            the radius of a water molecule.
-        :type probe_radius: float
-
-
-        :param n_points: resolution of the surface of each atom. Default is 100.
-            A higher number of points results in more precise measurements, but
-            slows down the calculation.
-        :type n_points: int
-
-
-        :param radii_dict: user-provided dictionary of atomic radii to use in
-            the calculation. Values will replace/complement those in the
-            default ATOMIC_RADII dictionary.
-        :type radii_dict: dict
-
-
-        >>> sr = ShrakeRupley()
-        >>> sr = ShrakeRupley(n_points=960)
-        >>> sr = ShrakeRupley(radii_dict={"O": 3.1415})
-        """
-        if probe_radius <= 0.0:
-            raise ValueError(
-                f"Probe radius must be a positive number: {probe_radius} <= 0"
-            )
-        self.probe_radius = float(probe_radius)
-
-
-        if n_points < 1:
-            raise ValueError(
-                f"Number of sphere points must be larger than 1: {n_points}"
-            )
-        self.n_points = n_points
-
-
-        # Update radii list with user provided lists.
-        self.radii_dict = ATOMIC_RADII.copy()
-        if radii_dict is not None:
-            self.radii_dict.update(radii_dict)
-
-
-        # Pre-compute reference sphere
-        self._sphere = self._compute_sphere()
-
-
-    def _compute_sphere(self):
-        """Return the 3D coordinates of n points on a sphere.
-
-
-        Uses the golden spiral algorithm to place points 'evenly' on the sphere
-        surface. We compute this once and then move the sphere to the centroid
-        of each atom as we compute the ASAs.
-        """
-        n = self.n_points
-
-
-        dl = np.pi * (3 - 5**0.5)
-        dz = 2.0 / n
-
-
-        longitude = 0
-        z = 1 - dz / 2
-
-
-        coords = np.zeros((n, 3), dtype=np.float32)
-        for k in range(n):
-            r = (1 - z * z) ** 0.5
-            coords[k, 0] = math.cos(longitude) * r
-            coords[k, 1] = math.sin(longitude) * r
-            coords[k, 2] = z
-            z -= dz
-            longitude += dl
-
-
-        return coords
-
-
-    def compute(self, coords, radii):
-        """Calculate surface accessibility surface area for an entity.
-
-
-        The resulting atomic surface accessibility values are attached to the
-        .sasa attribute of each entity (or atom), depending on the level. For
-        example, if level="R", all residues will have a .sasa attribute. Atoms
-        will always be assigned a .sasa attribute with their individual values.
-
-
-        :param entity: input entity.
-        """
-        # Get atoms and coords
-        n_atoms = len(coords)
-        # coords = np.array([a[2:5] for a in atoms], dtype=np.float64)
-
-
-        # Pre-compute atom neighbors using KDTree
-        kdt = KDTree(coords, 10)
-
-
-        # Pre-compute radius * probe table
-        # radii_dict = self.radii_dict
-        # radii = np.array([radii_dict[str(a[5].split('.')[0]).upper()] for a in atoms], dtype=np.float64)
-        radii += self.probe_radius
-        twice_maxradii = np.max(radii) * 2
-
-
-        # Calculate ASAa
-        asa_array = np.zeros((n_atoms, 1), dtype=np.int64)
-        ptset = set(range(self.n_points))
-        for i in range(n_atoms):
-            r_i = radii[i]
-
-
-            # Move sphere to atom
-            s_on_i = (np.array(self._sphere, copy=True) * r_i) + coords[i]
-            available_set = ptset.copy()
-
-
-            # KDtree for sphere points
-            kdt_sphere = KDTree(s_on_i, 10)
-
-
-            # Iterate over neighbors of atom i
-            for jj in kdt.search(coords[i], twice_maxradii):
-                j = jj.index
-                if i == j:
-                    continue
-
-
-                if jj.radius < (r_i + radii[j]):
-                    # Remove overlapping points on sphere from available set
-                    available_set -= {
-                        pt.index for pt in kdt_sphere.search(coords[j], radii[j])
-                    }
-
-
-            asa_array[i] = len(available_set)  # update counts
-
-
-        # Convert accessible point count to surface area in A**2
-        f = radii * radii * (4 * np.pi / self.n_points)
-        asa_array = asa_array * f[:, np.newaxis]
-
-
-        # Set atom .sasa
-        sasa = []
-        for i, atom in enumerate(coords):
             sasa.append(asa_array[i, 0])
         return sasa
