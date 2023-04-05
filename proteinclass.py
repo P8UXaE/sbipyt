@@ -98,6 +98,8 @@ class readprotein():
             return np.array([x, y, z])
         def cap_area(theta, phi=2*np.pi):
             '''
+            Computes the area of a triangle area that has a vertex found
+            in any pole
             theta goes from 0 - π , 0 - 180
             phi goes from 0 - 2π , 0 - 360
             cap_area(np.pi/4, np.pi)
@@ -106,6 +108,8 @@ class readprotein():
             return a
         def segment_area(theta1, theta2, phi):
             '''
+            Computes the area of a square area that has no vertex found
+            in any pole
             phi
             theta2 - theta1, theta1, theta2 != 0, 180
             segment_area(np.pi/4, np.pi/2, np.pi)
@@ -156,7 +160,7 @@ class readprotein():
         surface_grid = np.unique(np.array(surface_grid), axis=0) # Get the unique combinations
         tree_coords = cKDTree(coords) # cKDtree object with the coordinates of the protein atoms
 
-        mask = tree_coords.query(surface_grid)[0] <= radii[tree_coords.query(surface_grid)[1]] # True/False
+        mask = tree_coords.query(surface_grid)[0] <= radii[tree_coords.query(surface_grid)[1]] # True/False array for each point created, True if the point is inside any atom; distance < radii
         pocket_points = []
         for ijk, m in zip(surface_grid, mask):
             if m:
@@ -166,29 +170,29 @@ class readprotein():
             for angle in angles_combination:
                 t = angle[0]
                 p = angle[1]
-                points = np.array([np.add(np.array(ijk), np.array(spherical_to_cartesian(d, t, p))) for d in range(2, 15)])
-                collisions = tree_coords.query(points)[0] <= radii[tree_coords.query(points)[1]]
+                points = np.array([np.add(np.array(ijk), np.array(spherical_to_cartesian(d, t, p))) for d in range(2, 15)]) # From 2 to 15 distance in a theta and phi angle
+                collisions = tree_coords.query(points)[0] <= radii[tree_coords.query(points)[1]] # Check collisions in this direction, if any from d = 2 to d = 15
                 if np.any(collisions):
                     theta_collisions.append(t)
                     phi_collisions.append(p)
 
-            pairs = np.array([(t, p) for t, p in zip(theta_collisions, phi_collisions)])
+            pairs = np.array([(t, p) for t, p in zip(theta_collisions, phi_collisions)]) # Array of tuples of all the angles that have a collision
             surface = 0
-            for th in pairs:
-                if 45 <= th[0] <= 90:
+            for th in pairs: # This computes the area dividing the shpere into 8 meridians and 4 parallels
+                if 45 <= th[0] <= 90: # If parallel not in pole
                     square_opp_corner = np.add(th, np.array([45, 45]))
                     if square_opp_corner[1] == 360:
                         square_opp_corner[1] = 0
                     if np.any(np.all(pairs == square_opp_corner, axis=1)):
                         surface += segment_area(th[0]*np.pi/180, square_opp_corner[0]*np.pi/180, np.pi/4)
-                if abs(th[0]) == 0:
+                if abs(th[0]) == 0: # If parallel = north pole
                     side_corner = [np.any(np.all(pairs == np.add(th, np.array([45, x])), axis=1)) for x in range(0, 360, 45)]
                     for i in range(len(side_corner)-1):
                         if side_corner[i] == True and side_corner[i+1] == True:
                             surface += cap_area(np.pi/4, np.pi/4)
                     if side_corner[0] == True and side_corner[7] == True: # Check if the 0º and 315º are true
                         surface += cap_area(np.pi/4, np.pi/4)
-                if abs(th[0]) == 180:
+                if abs(th[0]) == 180: # If parallel = south pole
                     side_corner = [np.any(np.all(pairs == np.add(th, np.array([-45, x])), axis=1)) for x in range(0, 360, 45)]
                     for i in range(len(side_corner)-1):
                         if side_corner[i] == True and side_corner[i+1] == True:
@@ -196,16 +200,19 @@ class readprotein():
                     if side_corner[0] == True and side_corner[7] == True:
                         surface += cap_area(np.pi/4, np.pi/4)
 
-            if surface >= 2*np.pi:
+            if surface >= 2*np.pi: # Check if area is higher than half of the sphere
                 # print("The points cover at least half of the sphere.", surface)
                 pocket_points.append(ijk)
             else:
                 pass
                 # print("The points do not cover at least half of the sphere.")
 
-        return cKDTree(np.array(pocket_points))
+        return cKDTree(np.array(pocket_points)) # Returns a cKDTree object with all the points found in a pocket
     
     def pocketTree(self):
+        '''
+        First creation of the pocket cKDTree object
+        '''
         if self._pocket_tree is None:
             self._pocket_tree = self.geometric_binding()
         return self._pocket_tree
@@ -213,15 +220,8 @@ class readprotein():
     def featureMatrix(self, atom):
         '''
         Get the feature Matrix for the atom and its neighbors.
-        ---
-        Position and description:
-        []
-
-
         '''
-
         pocket_tree = self.pocketTree()
-
         sasa = self.sasaList()
         for i in range(0, len(sasa)):
             sasa[i] = (sasa[i]-np.min(sasa))/(np.max(sasa)-np.min(sasa))
@@ -245,13 +245,10 @@ class readprotein():
             distance = atomFeature[1]
             atomFeature = atomFeature[0]
 
-
             atomFeature.append(sasa[atomFeature[0]-1])
-
 
             for i in potential:
                 atomFeature.append(i)
-
 
             for d in [chem.dictionary_kd_hydrophobicity, chem.dictionary_ww_hydrophobicity, chem.dictionary_hh_hydrophobicity, chem.dictionary_mf_hydrophobicity, chem.dictionary_tt_hydrophobicity]:
                 if atomFeature[7] not in d:
@@ -266,11 +263,7 @@ class readprotein():
             
             for i in direction:
                 atomFeature.append(i)
-            
 
-            # print(sec_number)
-            # print(atomFeature[6]-1, len(sec_number))
-            # print(sec_number[atomFeature[6]-1])
             atomFeature.append(sec_number[atomFeature[6]-1])
 
             distances, indices = pocket_tree.query(np.array([atomFeature[2], atomFeature[3], atomFeature[4]]), k=10)
@@ -278,42 +271,22 @@ class readprotein():
             for i in distances:
                 atomFeature.append(i)
 
-
             ### DELETE ALL UNDESIRED ELEMENTS ###
             del atomFeature[0:8]
-
 
             ### CONVERT ALL ELEMENTS TO FLOAT ###
             for i in  range(0, len(atomFeature)):
                 atomFeature[i] = float(atomFeature[i])
 
-
-
-            # del atomFeature[0]
-            # del atomFeature[0]
-            # del atomFeature[3]
-            # del atomFeature[3]
-            # del atomFeature[3]
-            # # print(atomFeature)
-            # # del atomFeature[]
-
-
-            # del atomFeature[0:3]
-            # del atomFeature[2:]
-
-
-
-
-            # print(atomFeature)
-
-
             featMat.append(atomFeature)
 
-        # print(featMat)
-        return featMat
+        return featMat # Returns a matrix that will be lately flattened
 
 
     def directions(self, data):
+        '''
+        Get the directions of all the atoms with respect the first one
+        '''
         given_atom = data[0][0][2:5]
         neighbor_atoms = []
         for i in data:
@@ -321,7 +294,6 @@ class readprotein():
         given_atom = np.array(given_atom)
         neighbor_atoms = np.array(neighbor_atoms)
         directions = neighbor_atoms-given_atom
-
 
         return directions
 
@@ -339,6 +311,9 @@ class readprotein():
         return self._sasa
     
     def coords(self):
+        '''
+        Utility for the secondary structure detector algorithm
+        '''
         if self._mol_dict is None:
             moleculeList = []
             c = []
@@ -370,13 +345,15 @@ class readprotein():
                 sec = np.append(sec, i)
             while self.numAA() > len(sec):
                 sec = np.append(sec, '?')
-            # print(self.numAA())
-            # print(len(sec))
             self._secondary = sec
         return self._secondary
 
 
     def calculate_secondary_structure(self, coords):
+        '''
+        Calculates the secondary structure from the angles and distances between the
+        atoms of the protein's backbone
+        '''
         # Define the hydrogen bonding distance cutoffs for each type of interaction
         hbond_cutoffs = {'helix': 3.4, 'sheet': 3.2}
         
@@ -429,25 +406,27 @@ class readprotein():
         for i in range(1, len(sec_struct)-1):
             if sec_struct[i] == '?' and sec_struct[i-1] == 'E' and sec_struct[i+1] == 'E':
                 sec_struct[i] = 'E'
-        # c = 1
-        # for i in sec_struct:
-        #     if i == 'E':
-        #         print('E', c)
-        #     if i == 'H':
-        #         print('H', c)
-        #     c+=1
         
         return sec_struct
     
     def placeH(self, n, mp):
+        '''
+        Places an H atom when desired
+        '''
         direction = n-mp
         h = n+direction
         return h
     
     def midpoint(self, p1, p2):
+        '''
+        Returns midpoint between 2 coordinates
+        '''
         return (p1+p2)/2
 
     def Hangle(self, p0, p1, p2):
+        '''
+        Get the angle between 3 points. p1 being the vertex.
+        '''
         ba = p0 - p1
         bc = p2 - p1
         cos = np.dot(ba, bc)/(np.linalg.norm(ba) * np.linalg.norm(bc))
@@ -457,6 +436,9 @@ class readprotein():
         return angle
 
     def calculate_angle(self, p0, p1, p2, p3):
+        '''
+        Calculate proper dihedral angle
+        '''
         b0 = p0 - p1
         b1 = p2 - p1
         b2 = p3 - p2
@@ -539,7 +521,6 @@ class readMod2(readprotein):
     Explicit to read the mol2 file
     '''
 
-
     def atoms(self):
         atom_lines = []
         collect_atoms = False
@@ -578,11 +559,12 @@ class readpdb(readprotein):
 
 
 class Mol2ligand():
-
+    '''
+    Reading the solution points, the ones that form a binding site.
+    '''
 
     def __init__(self, mol2ligand):
         self._ligand = mol2ligand
-
 
     def readSolution(self):
         with open(self._ligand, 'r') as fl:
