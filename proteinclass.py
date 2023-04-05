@@ -8,6 +8,8 @@ import chemistry as chem
 from scipy.spatial import cKDTree
 import itertools
 from numba import njit
+from tqdm import tqdm
+import sys
 
 
 class readprotein():
@@ -19,6 +21,7 @@ class readprotein():
         self._mol_dict = None
         self._secondary = None
         self._pocket_tree = None
+        self._pocket_list = None
 
     def data(self):
         with open(self._file, 'r') as f:
@@ -74,7 +77,7 @@ class readprotein():
     
     def geometric_binding(self):
         '''
-        Returns a KDTree object.
+        Returns a list object.
         This object is filled with all the points found that are inside a
         protein pocket.
         From SASA>0 atoms, a 9x9 grid around it with dots placed every 3A
@@ -142,11 +145,14 @@ class readprotein():
                 pass
         angles_combination = unique_angles  # This contains all the vectors with modulus 1 that go in every direction
                                             # with 45º difference around the dots.
+        
         sasa_values = self.sasaList()
+
+
         exposed_coords = []
         # exposed_radii = []
         for c, r, sas in zip(coords, radii, sasa_values):
-            if sas > 0:
+            if sas >= 0:
                 exposed_coords.append(c.tolist()) # Get the coordinates of the atoms that have SASA>0
                 # exposed_radii.append(r) # Append the radii of the atoms that have SASA>0
 
@@ -160,9 +166,9 @@ class readprotein():
         surface_grid = np.unique(np.array(surface_grid), axis=0) # Get the unique combinations
         tree_coords = cKDTree(coords) # cKDtree object with the coordinates of the protein atoms
 
-        mask = tree_coords.query(surface_grid)[0] <= radii[tree_coords.query(surface_grid)[1]] # True/False array for each point created, True if the point is inside any atom; distance < radii
+        mask = tree_coords.query(surface_grid)[0] <= radii[tree_coords.query(surface_grid)[1]]+1.4 # True/False array for each point created, True if the point is inside any atom; distance < radii
         pocket_points = []
-        for ijk, m in zip(surface_grid, mask):
+        for ijk, m in tqdm(zip(surface_grid, mask), total=len(surface_grid), desc=" -- Computing pocket points...", file=sys.stdout):
             if m:
                 continue
             theta_collisions = []
@@ -171,7 +177,7 @@ class readprotein():
                 t = angle[0]
                 p = angle[1]
                 points = np.array([np.add(np.array(ijk), np.array(spherical_to_cartesian(d, t, p))) for d in range(2, 15)]) # From 2 to 15 distance in a theta and phi angle
-                collisions = tree_coords.query(points)[0] <= radii[tree_coords.query(points)[1]] # Check collisions in this direction, if any from d = 2 to d = 15
+                collisions = tree_coords.query(points)[0] <= radii[tree_coords.query(points)[1]]+1.4 # Check collisions in this direction, if any from d = 2 to d = 15
                 if np.any(collisions):
                     theta_collisions.append(t)
                     phi_collisions.append(p)
@@ -207,14 +213,22 @@ class readprotein():
                 pass
                 # print("The points do not cover at least half of the sphere.")
 
-        return cKDTree(np.array(pocket_points)) # Returns a cKDTree object with all the points found in a pocket
+        return pocket_points # Returns a list with all the points found that are part of pocket
     
+    def pocketList(self):
+        '''
+        Generate the list of pocket points
+        '''
+        if self._pocket_list is None:
+            self._pocket_list = self.geometric_binding()
+        return self._pocket_list
+
     def pocketTree(self):
         '''
         First creation of the pocket cKDTree object
         '''
         if self._pocket_tree is None:
-            self._pocket_tree = self.geometric_binding()
+            self._pocket_tree = cKDTree(np.array(self.pocketList()))
         return self._pocket_tree
     
     def featureMatrix(self, atom):
