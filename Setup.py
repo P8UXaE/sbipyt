@@ -13,17 +13,14 @@ setup(name='Protein binding site prediction',
         'pandas>=1.2.0',
         'matplotlib>=3.3.0',
         'tqdm',
-        'scipy',
-        'torch',
-        'gnnclass',
         'itertools',
-        'torch_geometric.nn',
-        'torch_geometric.data',
+        'scipy',
+        'torch_geometric',
+        'torch>=2.0.0',
         'Biopython',
-        'pyscf',
-        'ctypes',
-        'collections',
-    ],
+        'scikit-learn',
+        
+    ]
       
 )
 
