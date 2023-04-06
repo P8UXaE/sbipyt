@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from scipy.spatial.distance import pdist, squareform
+from sklearn.cluster import AgglomerativeClustering
 
 
 
@@ -198,4 +199,49 @@ if __name__=='__main__':
             solutions_probability[residue][atom]['position'] = [x, y, z]
                 
         print(solutions_probability)
+
+        solution_cmd = open(protein_name+'_chimera.cmd', 'w')
+        solution_cmd.write('# To execute the script move to the folder and $ chimera chimera_solution3.cmd\n')
+        solution_cmd.write('open '+options.fileRoute+'\n')
+        solution_cmd.write('display\n')
+
+        data = []
+        probabilities = []
+        residues = []
+
+        for res in solutions_probability.keys():
+            for at in solutions_probability[res].keys():
+                data.append(solutions_probability[res][at]['position'])
+                probabilities.append(solutions_probability[res][at]['solution'])
+                residues.append(res)
+
+        data = np.array(data)
+        probabilities = np.array(probabilities)
+
+        combined = np.column_stack((data, probabilities))
+
+        # Define the number of clusters you want to create
+        n_clusters = 10
+
+        # Create an instance of the AgglomerativeClustering algorithm
+        clusterer = AgglomerativeClustering(n_clusters=n_clusters, metric='euclidean', linkage='ward')
+        # clusterer = KMeans(n_clusters=n_clusters)
+
+        # Fit the algorithm on the data
+        cluster_labels = clusterer.fit_predict(combined)
+
+        # Print the cluster labels assigned to each point
+        print(cluster_labels)
+
+        colors = ['1,0.96,0.9', '1,0.91,0.8', '1,0.85,0.65', '1,0.75,0.47', '1,0.66,0.3', '1,0.57,0.17', '0.99,0.49,0.08', '0.97,0.4,0.03', '0.91,0.35,0.05', '0.85,0.28,0.06']
+        residue_number = next(iter(solutions_probability))
+        prom = []
+        for res, clus in zip(residues, cluster_labels):
+            if res > residue_number:
+                residue_number = res
+                solution_cmd.write('sel :'+str(residue_number)+'\n'+'color '+colors[round(sum(prom)/len(prom))]+' sel\n')
+                prom = []
+            prom.append(clus)
+        solution_cmd.write('sel :'+str(residue_number)+'\n'+'color '+colors[round(sum(prom)/len(prom))]+' sel\n')
+        solution_cmd.write('surface\n')
     

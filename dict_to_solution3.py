@@ -29,20 +29,18 @@ probabilities = np.array(probabilities)
 
 combined = np.column_stack((data, probabilities))
 
-
 # Define the number of clusters you want to create
 n_clusters = 10
 
 # Create an instance of the AgglomerativeClustering algorithm
 clusterer = AgglomerativeClustering(n_clusters=n_clusters, metric='euclidean', linkage='ward')
-# clusterer = KMeans(n_clusters=n_clusters)
+# clusterer = KMeans(n_clusters=n_clusters)
 
 # Fit the algorithm on the data
 cluster_labels = clusterer.fit_predict(combined)
 
 # Print the cluster labels assigned to each point
 print(cluster_labels)
-
 
 colors = ['1,0.96,0.9', '1,0.91,0.8', '1,0.85,0.65', '1,0.75,0.47', '1,0.66,0.3', '1,0.57,0.17', '0.99,0.49,0.08', '0.97,0.4,0.03', '0.91,0.35,0.05', '0.85,0.28,0.06']
 residue_number = next(iter(solution))
