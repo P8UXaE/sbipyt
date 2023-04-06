@@ -7,6 +7,7 @@ import torch.optim as optim
 import sys
 
 
+
 class GNN(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim):
         super(GNN, self).__init__()

@@ -49,7 +49,7 @@ iters = 1
 if os.path.isfile('gnn_model.pth'):
     gnn_model.load_state_dict(torch.load('gnn_model.pth'))
 
-# Step 4: Loas the data for training
+# Step 4: Load the data for training
 for file in os.listdir(rootdir): # This will get all the proteins inside the scPDB folder
 
     if file in molecules_trained:
