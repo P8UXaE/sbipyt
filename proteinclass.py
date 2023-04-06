@@ -3,7 +3,6 @@ import numpy as np
 import collections
 from ctypes import *
 from Bio.PDB.kdtrees import KDTree
-import pyscf
 import chemistry as chem
 from scipy.spatial import cKDTree
 import itertools
@@ -244,16 +243,7 @@ class readprotein():
         directions = self.directions(data)
         # eDensity = self.electronDensity(data)
         ljP = self.lj_potential(data)
-        secondary = self.secondaryList()
-        sec_number = []
-        # print('-'*10+'features'+'-'*10)
-        for i in secondary:
-            if i == '?': # Loop
-                sec_number.append('0')
-            if i == 'E': # Beta sheet
-                sec_number.append('1')
-            if i == 'H': # Alpha helix
-                sec_number.append('2')
+        sec_number = self.secondaryList()
         featMat = []
         for atomFeature, potential, direction in zip(data, ljP, directions):
             distance = atomFeature[1]
@@ -360,6 +350,16 @@ class readprotein():
             while self.numAA() > len(sec):
                 sec = np.append(sec, '?')
             self._secondary = sec
+            sec_number = []
+            # print('-'*10+'features'+'-'*10)
+            for i in self._secondary:
+                if i == '?': # Loop
+                    sec_number.append('0')
+                if i == 'E': # Beta sheet
+                    sec_number.append('1')
+                if i == 'H': # Alpha helix
+                    sec_number.append('2')
+            self._secondary = sec_number
         return self._secondary
 
 

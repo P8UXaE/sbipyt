@@ -15,7 +15,7 @@ PERCENTAGE  RGB 0-1
 90-100%     0.85,0.28,0.06
 '''
 
-solution_cmd = open('chimera_solution2.cmd', 'a')
+solution_cmd = open('chimera_solution2.cmd', 'w')
 solution_cmd.write('# To execute the script move to the folder and $ chimera chimera_solution2.cmd\n')
 solution_cmd.write('open /Users/paupujolvives/Desktop/pau/master/sbi/sbipyt/protein_example_biter.mol2\n')
 solution_cmd.write('display\n')
