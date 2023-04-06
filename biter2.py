@@ -151,22 +151,12 @@ if __name__=='__main__':
         top3_indices = sorted(range(len(avg_distances)), key=lambda i: avg_distances[i])[:3]
         print('Top 3 clusters distance:', top3_indices)
 
-
-
-
-
-        # Plot the silhouette scores
-        plt.plot(cluster_range, silhouette_scores)
-        plt.xlabel('Number of Clusters')
-        plt.ylabel('Silhouette Score')
-        plt.title('Silhouette Analysis')
-        plt.show()
-
-
-
-        
-
-
+        # # Plot the silhouette scores
+        # plt.plot(cluster_range, silhouette_scores)
+        # plt.xlabel('Number of Clusters')
+        # plt.ylabel('Silhouette Score')
+        # plt.title('Silhouette Analysis')
+        # plt.show()
 
         bs.write("END                                                                             \n")
     
