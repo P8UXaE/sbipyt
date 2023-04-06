@@ -115,7 +115,7 @@ if __name__=='__main__':
         if optimal_num_clusters == 0:
             optimal_num_clusters = maximums[-1]+2
         
-        print(optimal_num_clusters)
+        # print(optimal_num_clusters)
 
         # Fit the KMeans model to the data
         kmeans = KMeans(n_clusters=optimal_num_clusters, n_init=3, init='k-means++', random_state=42)
@@ -147,9 +147,18 @@ if __name__=='__main__':
         # Find the cluster with the lowest average distance
         best_cluster_index = avg_distances.index(min(avg_distances))
         # best_cluster = clusters[best_cluster_index]
+        print('-'*30)
+        print('Please, check the top 3 clusters')
+        print('Go to Chimera, open the protein requested and open the _pocketPoints.pdb file. You can use:')
+        print('$ chimera '+options.fileRoute+" "+protein_name+'_pocketPoints.pdb')
+        print('Then activate the command line; Favorites > Command Line')
+        print('Type ´sel: X´ to select and visualize the Clusters detected of pocket binding sites.')
+        print('-'*30)
         print('Best cluster distance:', best_cluster_index)
         top3_indices = sorted(range(len(avg_distances)), key=lambda i: avg_distances[i])[:3]
         print('Top 3 clusters distance:', top3_indices)
+        print('All clusters:', sorted(range(len(avg_distances)), key=lambda i: avg_distances[i]))
+        print('-'*30)
 
         # # Plot the silhouette scores
         # plt.plot(cluster_range, silhouette_scores)
