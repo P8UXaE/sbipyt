@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import sys
-import gnnclass as gnc
 
 
 class MLP(nn.Module):
