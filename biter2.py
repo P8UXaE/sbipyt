@@ -38,11 +38,18 @@ if __name__=='__main__':
     
     parser.add_argument('fileRoute',
                         help= "route of the file to be analyzed")
+    
+    parser.add_argument('fileSave',
+                        nargs='?',
+                        help="name of the files to be saved")
 
     options = parser.parse_args()
     # print(options.intype)
-    protein_name = os.path.splitext(os.path.basename(options.fileRoute))[0]
-
+    # print(options.fileSave)
+    if options.fileSave:
+        protein_name = options.fileSave
+    else:
+        protein_name = os.path.splitext(os.path.basename(options.fileRoute))[0]
 
     ######################################################
             ## INITIALIZATE GNN MODEL ##
@@ -155,9 +162,9 @@ if __name__=='__main__':
         print('Then activate the command line; Favorites > Command Line')
         print('Type ´sel: X´ to select and visualize the Clusters detected of pocket binding sites.')
         print('-'*30)
-        print('Best cluster distance:', best_cluster_index)
+        print('Best cluster by distance:', best_cluster_index)
         top3_indices = sorted(range(len(avg_distances)), key=lambda i: avg_distances[i])[:3]
-        print('Top 3 clusters distance:', top3_indices)
+        print('Top 3 clusters by distance:', top3_indices)
         print('All clusters:', sorted(range(len(avg_distances)), key=lambda i: avg_distances[i]))
         print('-'*30)
 
@@ -176,7 +183,7 @@ if __name__=='__main__':
     if not options.pocket and not options.biter or options.biter and not options.pocket:
         solutions_probability = {} # Structure: residue - atom - sasa, solution
         numAtoms = mol.numAtoms()
-        for i in tqdm(range(numAtoms), desc="Generating Matrices...", file=sys.stdout):
+        for i in tqdm(range(numAtoms), desc="Generating atom probabilities...", file=sys.stdout):
             feature_matrix = mol.featureMatrix(mol.atoms()[i])
             feature_matrix = [item for feature in feature_matrix for item in feature]
             feature_matrix = torch.tensor(feature_matrix, requires_grad=True)
@@ -198,7 +205,7 @@ if __name__=='__main__':
             solutions_probability[residue][atom]['solution'] = output
             solutions_probability[residue][atom]['position'] = [x, y, z]
                 
-        print(solutions_probability)
+        # print(solutions_probability)
 
         solution_cmd = open(protein_name+'_chimera.cmd', 'w')
         solution_cmd.write('# To execute the script move to the folder and $ chimera chimera_solution3.cmd\n')
@@ -230,9 +237,6 @@ if __name__=='__main__':
         # Fit the algorithm on the data
         cluster_labels = clusterer.fit_predict(combined)
 
-        # Print the cluster labels assigned to each point
-        print(cluster_labels)
-
         colors = ['1,0.96,0.9', '1,0.91,0.8', '1,0.85,0.65', '1,0.75,0.47', '1,0.66,0.3', '1,0.57,0.17', '0.99,0.49,0.08', '0.97,0.4,0.03', '0.91,0.35,0.05', '0.85,0.28,0.06']
         residue_number = next(iter(solutions_probability))
         prom = []
@@ -244,4 +248,19 @@ if __name__=='__main__':
             prom.append(clus)
         solution_cmd.write('sel :'+str(residue_number)+'\n'+'color '+colors[round(sum(prom)/len(prom))]+' sel\n')
         solution_cmd.write('surface\n')
+
+        print('-'*30)
+        print('To visualize the results run the following command:')
+        print('$ chimera '+protein_name+'_chimera.cmd')
+        print('-'*30)
+    
+
+
+
+
+
+    if not options.pocket and not options.biter or options.pocket and options.biter:
+        print('You can visualize all the results as:')
+        print('$ chimera '+protein_name+'_chimera.cmd'+protein_name+'_pocketPoints.pdb')
+
     
