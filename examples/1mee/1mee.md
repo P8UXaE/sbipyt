@@ -2,6 +2,7 @@ After running the command
 $ python biter.py -i pdb 1mee.pdb
 The results shown in the console are the following:
 
+```bash
  -- Computing pocket points...: 100%|████████████████████████████| 41529/41529 [00:36<00:00, 1130.23it/s]
 ------------------------------
 Please, check the top 3 clusters
@@ -21,6 +22,7 @@ $ chimera 1mee_chimera.cmd
 ------------------------------
 You can visualize all the results as:
 $ chimera 1mee_chimera.cmd 1mee_pocketPoints.pdb
+```
 
 ![1mee output chimera](1mee_image.png "1mee visualisation in chimera of probabilities and pocket cluster points")
 
