@@ -24,6 +24,8 @@ You can visualize all the results as:
 $ chimera 1mee_chimera.cmd 1mee_pocketPoints.pdb
 ```
 
+As seen in the folder, the program has generated a 1mee_SingleChainAdapted.pdb, that is a single chain used to show the results from the ML program.
+
 ![1mee output chimera](1mee_image.png "1mee visualisation in chimera of probabilities and pocket cluster points")
 
 As seen, the best clusters of pocket points indicate the pockets in the protein. Meanwhile, the residues with a darker color indicate higher probability of taking part in a binding process.
