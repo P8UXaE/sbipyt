@@ -574,6 +574,7 @@ class readpdb(readprotein):
         atom_lines = []
         i = 1
         r = 0
+        lastr = -99
         for line in self.data():
             if line.startswith('ATOM'):
                 if line[77] != 'H':
@@ -583,8 +584,9 @@ class readpdb(readprotein):
                     aY = float(line[38:45])
                     aZ = float(line[46:54])
                     aType2 = str(line[76:79]).strip()
-                    if int(line[22:26])!=r:
+                    if int(line[22:26])!=lastr:
                         r += 1
+                        lastr = int(line[22:26])
                     rNum = int(r)
                     rType = str(line[17:20]).strip()
                     aCharge = float(0)
