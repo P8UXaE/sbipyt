@@ -569,7 +569,39 @@ class readpdb(readprotein):
     '''
     Explicit to read the pdb file
     '''
-    pass
+
+    def atoms(self):
+        atom_lines = []
+        i = 1
+        r = 0
+        for line in self.data():
+            if line.startswith('ATOM'):
+                if line[77] != 'H':
+                    aNum = i
+                    aType = str(line[13:17]).strip()
+                    aX = float(line[30:37])
+                    aY = float(line[38:45])
+                    aZ = float(line[46:54])
+                    aType2 = str(line[76:79]).strip()
+                    if int(line[22:26])!=r:
+                        r += 1
+                    rNum = int(r)
+                    rType = str(line[17:20]).strip()
+                    aCharge = float(0)
+                    atom_lines.append([aNum, aType, aX, aY, aZ, aType2, rNum, rType, aCharge])
+                    # print([aNum, aType, aX, aY, aZ, aType2, rNum, rType, aCharge])
+                    i+=1
+        pdb = open('singlechain.pdb', 'w')
+        n = 1
+        for i in atom_lines:
+            pdb.write("ATOM"+" "*(7-len(str(n)))+str(n)+"  "+str(i[1])+" "*(4-len(str(i[1])))+str(i[7])+" A"+" "*(4-len(str(i[6])))+str(i[6])+
+                      " "*(12-len(str(i[2])))+str(i[2])+" "*(8-len(str(i[3])))+str(i[3])+" "*(8-len(str(i[4])))+str(i[4])+"  1.00 00.00"+" "*(12-len(str(i[5])))+str(i[5])+"  \n")
+            n += 1
+        pdb.write("TER\n")
+        pdb.close()
+        return atom_lines
+
+
 
 
 class Mol2ligand():

@@ -47,9 +47,9 @@ if __name__=='__main__':
     # print(options.intype)
     # print(options.fileSave)
     if options.fileSave:
-        protein_name = options.fileSave
+        protein_name = str(options.fileSave)
     else:
-        protein_name = os.path.splitext(os.path.basename(options.fileRoute))[0]
+        protein_name = str(os.path.splitext(os.path.basename(options.fileRoute))[0])
 
     ######################################################
             ## INITIALIZATE GNN MODEL ##
@@ -88,6 +88,7 @@ if __name__=='__main__':
     ######################################################
     if options.intype == 'pdb':
         mol = proteinclass.readpdb(options.fileRoute)
+        os.rename('singlechain.pdb', protein_name+'_SingleChainAdapted.pdb')
 
     ######################################################
             ## RUN THE GEOMETRIC PROGRAM ##
@@ -208,8 +209,10 @@ if __name__=='__main__':
         # print(solutions_probability)
 
         solution_cmd = open(protein_name+'_chimera.cmd', 'w')
-        solution_cmd.write('# To execute the script move to the folder and $ chimera chimera_solution3.cmd\n')
-        solution_cmd.write('open '+options.fileRoute+'\n')
+        if options.intype == 'pdb':
+            solution_cmd.write('open '+protein_name+'_SingleChainAdapted.pdb'+'\n')
+        else:
+            solution_cmd.write('open '+options.fileRoute+'\n')
         solution_cmd.write('display\n')
 
         data = []
@@ -261,6 +264,6 @@ if __name__=='__main__':
 
     if not options.pocket and not options.biter or options.pocket and options.biter:
         print('You can visualize all the results as:')
-        print('$ chimera '+protein_name+'_chimera.cmd'+protein_name+'_pocketPoints.pdb')
+        print('$ chimera '+protein_name+'_chimera.cmd '+protein_name+'_pocketPoints.pdb')
 
     
