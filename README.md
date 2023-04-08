@@ -218,13 +218,13 @@ The secondary structure of the protein is computed using the Φ and Ψ angles fo
 Alpha helix:
 For the alpha helix, the number of residues between one and another residue goes from 3 to 5. Also, the distance between those residues is less than 3.4 Å. Also Φ has to be 92 ± 35 %, and Ψ must be 98 ± 35 %.
 
-$$n_(r<sub>j</sub>) = n_(r<sub>i</sub>) + 3,4,5$$
+$n_{rj} = n_{ri} + 3,4,5$
 
-$$d(n<sub>rj</sub>,n<sub>ri</sub>)<3.4$$
+$d(n_{rj}, n_{ri}) < 3.4$
 
-$$92-35\%<Φ<92+35%$$
+$92-35\% < \Phi < 92+35\%$
 
-$$98-35\%<Ψ<98+35%$$
+$98-35\% < \Psi < 98+35\%$
 
 
 Beta sheet:
