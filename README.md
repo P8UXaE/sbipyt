@@ -61,10 +61,9 @@ $ pip list
 $ pip3 list
 $ pip freeze > requirements.txt
 
-Remove module:
+Remove module:\n
 $ pip remove <package-name>
 
-<<<<<<< HEAD
 # setup 
 Used to package all the modules or application for the project into a distributable package that can be installed by other users. The script contains information about the package, including its name, version, author, description, and dependencies, among other things.
 the setuptools package is needed 
