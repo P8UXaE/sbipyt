@@ -59,18 +59,43 @@ This calls the program using a mol2 type file. It will only generate the geometr
 You can find some examples of the results and the commands used in the examples folder.
 
 
-## setup 
+## Automatic Setup 
 
 Used to package all the modules or application for the project into a distributable package that can be installed by other users. The script contains information about the package, including its name, version, author, description, and dependencies, among other things.
 the setuptools package is needed 
 $ pip install setuptools
 
 load all the requirements for the project 
+```
 $ python Setup.py install
 $ python Setup.py build
+```
 
+## Create working environment - Manual Setup
+
+If the setup.py file does not work, you can do it manually. First of all you need to create a virtual environment. In order to do this you can run the following comands in the parent folder.
+```bash
+$ python3.9 -m venv python3_9venv
+```
+You can activate the virtual environment by typing the following
+```bash
+$ source python3_9venv/bin/activate
+```
+And you can deactivate the environment by
+```bash
+$ deactivate
+```
+To remove the virtual env:
+```bash
+$ rm -rf python3_9venv
+```
+Once you are inside the environment, you can use pip to install any package
+```bash
+$ pip install numpy
+```
 
 ## Training Set
+
 The training set is obtained from *http://bioinfo-pharma.u-strasbg.fr/scPDB/*. It is a mannualy curated database that contains proteins with known binding sites.
 
 This tree represents how files are stored inside the scPDB folder
@@ -112,43 +137,16 @@ The training process:
 2. Using the model, do the calculus and the parameter modification of the model for every atom in a protein.
 3. Once all the protein has been evaluated and has been used in order to improve the model, the protein folder is written down in a list in order to not be used again to train the model, given that the program is coded in order to use every protein in scPDB folder to train the model.
 
-## Create working environment - Manual Setup
-
-If the setup.py file does not work, you can do it manually. First of all you need to create a virtual environment. In order to do this you can run the following comands in the parent folder.
-```bash
-$ python3.9 -m venv python3_9venv
+In order to run the training algorithm you need to move to the training folder, and have downloaded the scPDB data in the folder. Then just run
 ```
-You can activate the virtual environment by typing the following
-```bash
-$ source python3_9venv/bin/activate
+$ python train2.py 2> acc2.log
 ```
-And you can deactivate the environment by
-```bash
-$ deactivate
+This will run the training script. You can see the accuracy only when the ML process has started, after the first 'Computing pocket points...':
 ```
-To remove the virtual env:
-```bash
-$ rm -rf python3_9venv
-```
-Once you are inside the environment, you can use pip to install any package
-```bash
-$ pip install numpy
+tail -n 5 acc2.log
 ```
 
-
-Check modules:
-$ pip list
-$ pip3 list
-$ pip freeze > requirements.txt
-
-Remove module:
-$ pip remove <package-name>
-
-
-
-
-
-
+## PDB working type
 
 The pdb file must be like the following example in order to be integrated in the python class:
 (1mee - *https://www.rcsb.org/structure/1MEE*)
@@ -225,9 +223,9 @@ $n_{rj} = n_{ri} + 3,4,5$
 
 $d(n_{rj}, n_{ri}) < 3.4$
 
-$92 \pm 35% < \Phi < 92 \pm 35%$
+$92 - 32.2 < \Phi < 92 + 32.2$
 
-$98 \pm 35% < \Psi < 98 \pm 35%$
+$98 - 34.3 < \Psi < 98 + 34.3$
 
 
 Beta sheet:
@@ -270,3 +268,15 @@ Every protein loop the program loads the existing model and tries to improve it,
 While developing the algorithm some further investigation was thought:
 1. Instead of working using single atoms, precalcualte the residue properties as a mean of all the atoms and use the residues to feed the ML model. This way less data to feed the ML is used and less variaty is seen.
 2. Use techniques such as upgrading the minority group. This way we could rise the atoms or residues taking part in binding processes to higher levels, up to 50%. This could result in a better output and accuracy of the model.
+
+
+
+
+
+# Background and cientific explanation 
+
+SASA (Solvent Accessible Surface Area) is a program that calculates the solvent-accessible surface area of a molecule, which is a measure of the exposed surface area of a molecule that is available for interaction with solvent molecules. The SASA program calculates the surface area of a molecule by using an algorithm that defines the solvent-accessible surface as the surface that can be reached by a probe sphere that rolls along the surface of the molecule without penetrating it.
+The output of the SASA program typically includes a feature matrix and an adjacent matrix that describe the molecule's surface area and connectivity, respectively.
+The feature matrix contains a row for each atom in the molecule and a column for each feature, such as the SASA, atomic radius, or charge. The SASA value for each atom is usually included as one of the features in the matrix.
+
+The adjacent matrix describes the connectivity between atoms in the molecule, typically in the form of a sparse matrix where each row and column corresponds to an atom, and the entries indicate the strength of the bond between the atoms. In some cases, the adjacent matrix may also include information on non-covalent interactions, such as hydrogen bonds or Van der Waals interactions.
