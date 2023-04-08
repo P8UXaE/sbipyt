@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from scipy.spatial.distance import pdist, squareform
+from sklearn.cluster import AgglomerativeClustering
 
 
 
@@ -37,11 +38,18 @@ if __name__=='__main__':
     
     parser.add_argument('fileRoute',
                         help= "route of the file to be analyzed")
+    
+    parser.add_argument('fileSave',
+                        nargs='?',
+                        help="name of the files to be saved")
 
     options = parser.parse_args()
     # print(options.intype)
-    protein_name = os.path.splitext(os.path.basename(options.fileRoute))[0]
-
+    # print(options.fileSave)
+    if options.fileSave:
+        protein_name = str(options.fileSave)
+    else:
+        protein_name = str(os.path.splitext(os.path.basename(options.fileRoute))[0])
 
     ######################################################
             ## INITIALIZATE GNN MODEL ##
@@ -80,6 +88,7 @@ if __name__=='__main__':
     ######################################################
     if options.intype == 'pdb':
         mol = proteinclass.readpdb(options.fileRoute)
+        os.rename('singlechain.pdb', protein_name+'_SingleChainAdapted.pdb')
 
     ######################################################
             ## RUN THE GEOMETRIC PROGRAM ##
@@ -115,7 +124,7 @@ if __name__=='__main__':
         if optimal_num_clusters == 0:
             optimal_num_clusters = maximums[-1]+2
         
-        print(optimal_num_clusters)
+        # print(optimal_num_clusters)
 
         # Fit the KMeans model to the data
         kmeans = KMeans(n_clusters=optimal_num_clusters, n_init=3, init='k-means++', random_state=42)
@@ -147,9 +156,18 @@ if __name__=='__main__':
         # Find the cluster with the lowest average distance
         best_cluster_index = avg_distances.index(min(avg_distances))
         # best_cluster = clusters[best_cluster_index]
-        print('Best cluster distance:', best_cluster_index)
+        print('-'*30)
+        print('Please, check the top 3 clusters')
+        print('Go to Chimera, open the protein requested and open the _pocketPoints.pdb file. You can use:')
+        print('$ chimera '+options.fileRoute+" "+protein_name+'_pocketPoints.pdb')
+        print('Then activate the command line; Favorites > Command Line')
+        print('Type ´sel: X´ to select and visualize the Clusters detected of pocket binding sites.')
+        print('-'*30)
+        print('Best cluster by distance:', best_cluster_index)
         top3_indices = sorted(range(len(avg_distances)), key=lambda i: avg_distances[i])[:3]
-        print('Top 3 clusters distance:', top3_indices)
+        print('Top 3 clusters by distance:', top3_indices)
+        print('All clusters:', sorted(range(len(avg_distances)), key=lambda i: avg_distances[i]))
+        print('-'*30)
 
         # # Plot the silhouette scores
         # plt.plot(cluster_range, silhouette_scores)
@@ -166,7 +184,7 @@ if __name__=='__main__':
     if not options.pocket and not options.biter or options.biter and not options.pocket:
         solutions_probability = {} # Structure: residue - atom - sasa, solution
         numAtoms = mol.numAtoms()
-        for i in tqdm(range(numAtoms), desc="Generating Matrices...", file=sys.stdout):
+        for i in tqdm(range(numAtoms), desc="Generating atom probabilities...", file=sys.stdout):
             feature_matrix = mol.featureMatrix(mol.atoms()[i])
             feature_matrix = [item for feature in feature_matrix for item in feature]
             feature_matrix = torch.tensor(feature_matrix, requires_grad=True)
@@ -188,5 +206,64 @@ if __name__=='__main__':
             solutions_probability[residue][atom]['solution'] = output
             solutions_probability[residue][atom]['position'] = [x, y, z]
                 
-        print(solutions_probability)
+        # print(solutions_probability)
+
+        solution_cmd = open(protein_name+'_chimera.cmd', 'w')
+        if options.intype == 'pdb':
+            solution_cmd.write('open '+protein_name+'_SingleChainAdapted.pdb'+'\n')
+        else:
+            solution_cmd.write('open '+options.fileRoute+'\n')
+        solution_cmd.write('display\n')
+
+        data = []
+        probabilities = []
+        residues = []
+
+        for res in solutions_probability.keys():
+            for at in solutions_probability[res].keys():
+                data.append(solutions_probability[res][at]['position'])
+                probabilities.append(solutions_probability[res][at]['solution'])
+                residues.append(res)
+
+        data = np.array(data)
+        probabilities = np.array(probabilities)
+
+        combined = np.column_stack((data, probabilities))
+
+        # Define the number of clusters you want to create
+        n_clusters = 10
+
+        # Create an instance of the AgglomerativeClustering algorithm
+        clusterer = AgglomerativeClustering(n_clusters=n_clusters, metric='euclidean', linkage='ward')
+        # clusterer = KMeans(n_clusters=n_clusters)
+
+        # Fit the algorithm on the data
+        cluster_labels = clusterer.fit_predict(combined)
+
+        colors = ['1,0.96,0.9', '1,0.91,0.8', '1,0.85,0.65', '1,0.75,0.47', '1,0.66,0.3', '1,0.57,0.17', '0.99,0.49,0.08', '0.97,0.4,0.03', '0.91,0.35,0.05', '0.85,0.28,0.06']
+        residue_number = next(iter(solutions_probability))
+        prom = []
+        for res, clus in zip(residues, cluster_labels):
+            if res > residue_number:
+                residue_number = res
+                solution_cmd.write('sel :'+str(residue_number)+'\n'+'color '+colors[round(sum(prom)/len(prom))]+' sel\n')
+                prom = []
+            prom.append(clus)
+        solution_cmd.write('sel :'+str(residue_number)+'\n'+'color '+colors[round(sum(prom)/len(prom))]+' sel\n')
+        solution_cmd.write('surface\n')
+
+        print('-'*30)
+        print('To visualize the results run the following command:')
+        print('$ chimera '+protein_name+'_chimera.cmd')
+        print('-'*30)
+    
+
+
+
+
+
+    if not options.pocket and not options.biter or options.pocket and options.biter:
+        print('You can visualize all the results as:')
+        print('$ chimera '+protein_name+'_chimera.cmd '+protein_name+'_pocketPoints.pdb')
+
     
