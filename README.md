@@ -47,20 +47,14 @@ The protein structure is extracted from the protein.mol2 file. The atoms that ar
 
 # git add . && git reset ./python3_9venv
 
-# setup 
-Used to package all the modules or application for the project into a distributable package that can be installed by other users. The script contains information about the package, including its name, version, author, description, and dependencies, among other things.
-the setuptools package is needed 
-$ pip install setuptools
-
-load all the requirements for the project 
-$ python Setup.py install
+# Create working environment 
 
 Create a virtual env:
-$ python3.9 -m venv myenv (in order to install pytorch)
-$ source myenv/bin/activate
+$ python3.9 -m venv python3_9venv (in order to install pytorch)
+$ source python3_9venv/bin/activate
 $ deactivate
 To remove the virtual env:
-$ rm -rf myenv
+$ rm -rf python3_9venv
 
 Check modules:
 $ pip list
@@ -69,3 +63,14 @@ $ pip freeze > requirements.txt
 
 Remove module:
 $ pip remove <package-name>
+
+# setup 
+Used to package all the modules or application for the project into a distributable package that can be installed by other users. The script contains information about the package, including its name, version, author, description, and dependencies, among other things.
+the setuptools package is needed 
+$ pip install setuptools
+
+load all the requirements for the project 
+$ python Setup.py install
+$ python Setup.py build
+
+model training 
