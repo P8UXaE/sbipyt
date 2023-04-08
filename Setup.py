@@ -22,6 +22,9 @@ setup(name='Protein binding site prediction',
         'scikit-learn',
         'typing_extensions',
         'numba==0.56.4',
-    ]
+    ],
+        cmdclass={
+        'install': InstallCommand,
+    }
 )
 
