@@ -66,8 +66,10 @@ the setuptools package is needed
 $ pip install setuptools
 
 load all the requirements for the project 
+```
 $ python Setup.py install
 $ python Setup.py build
+```
 
 ## Create working environment - Manual Setup
 
