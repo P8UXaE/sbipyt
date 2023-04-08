@@ -134,6 +134,7 @@ Remove module:
 $ pip remove <package-name>
 
 # setup 
+
 Used to package all the modules or application for the project into a distributable package that can be installed by other users. The script contains information about the package, including its name, version, author, description, and dependencies, among other things.
 the setuptools package is needed 
 $ pip install setuptools
@@ -144,8 +145,6 @@ $ python Setup.py build
 
 model training 
 
-
-## PDB style
 
 
 The pdb file must be like the following example in order to be integrated in the python class:
@@ -179,4 +178,57 @@ ATOM    442  C2'  DC N 263     158.349 131.183 114.538  1.00255.48           C
 ATOM    443  C1'  DC N 263     158.064 131.264 116.024  1.00255.48           C  
 ```
 
-# 
+
+## Theory
+
+The binding sites detector is coded mainly as a machine learning approach. It first computes some data and using the pytorch package it trains an artificial intelligence that is capable to predict if each atom of a molecule takes part on a binding site or not. Lately, to filter the solutions, a clustering algorithm is computed in order to detect regions with high positive solution density. To get every data row passed to the model, it must compute some features:
+1. Every row contains the atom that we are evaluating and its 15 nearest neighbors.
+2. For every neighbor:
+    a) SASA value
+    b) Direction respect the main atom
+    c) The secondary structure of the residue of which the atom pertains
+    d) Lenard-Jones potential
+    e) Hydrophobicity of the residue of which the atom pertains
+    f) 10 nearest distances to geometric possible binding points
+
+a) SASA value:
+
+The SASA (solvent-accessible surface area) value is computed using the Biopython package.
+It uses “the “rolling ball” algorithm developed by Shrake & Rupley algorithm, which uses a sphere (of equal radius to a solvent molecule) to probe the surface of the molecule.” [https://biopython.org/docs/dev/api/Bio.PDB.SASA.html]
+
+b) Direction respect the main atom
+
+The objective of this precalculus is to both describe the protein structure using several features and adding as much relevant information as possible.
+One of the ways to describe the structure is to know the direction of the 15 nearest neighbors of each atom.
+This is basically computed using numpy arrays, and subtractions that result on a direction
+
+$$(AB) ̅=A-B$$
+
+c) Secondary structure
+
+The secondary structure of the protein is computed using the Φ and Ψ angles for the helix structure. For the beta sheet, the angle computed is the resulting between the N-H bond and the O.
+
+Alpha helix:
+For the alpha helix, the number of residues between one and another residue goes from 3 to 5. Also, the distance between those residues is less than 3.4 Å. Also Φ has to be 92 ± 35 %, and Ψ must be 98 ± 35 %.
+
+$$ Alpha Helix{█(n_(r_j )=n_(r_i )+3,4,5@d(n_(r_j ),n_(r_i ) )$$
+
+Beta sheet:
+For the beta sheet first the distance between Ni and Oj must be < 3.2 Å. Then a H is placed in the same plane as Cα-N-C at a distance of the midpoint of Cα-C, but in the opposite direction. Having placed the H in between Ni and Oj it is time to calculate the angle being H the vertex. The angle must be 180 ± 15 %.
+
+d) Lennard-Jones potential
+
+It returns a matrix with the potential for every pair of atoms.
+
+$$W(r)=4ε((σ/r)^12-(σ/r)^6 )$$
+
+ε and σ are obtained from a library that has those values from each pair of atoms [https://github.com/choderalab/ambermini/blob/master/share/amber/dat/leap/parm/parm99.dat].
+
+e) Hydrophobicity
+
+In order to transform the letter symbol of each residue and to add hydrophobicity information, a library that contains different hydrophobicity types is used [https://www.cgl.ucsf.edu/chimera/docs/UsersGuide/midas/hydrophob.html#anote].
+
+f) Geometry based.
+
+To add more information about the geometry of the molecule its used a script that calculates points around the protein that are placed on concave regions.
+This script uses the SASA values to know which atoms do have accessible area, then it places points from [x-3, y-3, z-3] to [x+3, y+3, z+3] with a 3 value step. Once it has the points it calculates whether each point is inside another atom or not. If not, it throws other points until reached a distance of 15 or a collision with another atom. Once it has all the collisions it calculates the area of first sphere that is occupied by the collisions. A draw in 2D molecule representation is shown for a better understanding.
