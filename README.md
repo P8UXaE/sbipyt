@@ -59,6 +59,17 @@ This calls the program using a mol2 type file. It will only generate the geometr
 You can find some examples of the results and the commands used in the examples folder.
 
 
+## setup 
+
+Used to package all the modules or application for the project into a distributable package that can be installed by other users. The script contains information about the package, including its name, version, author, description, and dependencies, among other things.
+the setuptools package is needed 
+$ pip install setuptools
+
+load all the requirements for the project 
+$ python Setup.py install
+$ python Setup.py build
+
+
 ## Training Set
 The training set is obtained from *http://bioinfo-pharma.u-strasbg.fr/scPDB/*. It is a mannualy curated database that contains proteins with known binding sites.
 
@@ -101,7 +112,7 @@ The training process:
 2. Using the model, do the calculus and the parameter modification of the model for every atom in a protein.
 3. Once all the protein has been evaluated and has been used in order to improve the model, the protein folder is written down in a list in order to not be used again to train the model, given that the program is coded in order to use every protein in scPDB folder to train the model.
 
-## Create working environment
+## Create working environment - Manual Setup
 
 If the setup.py file does not work, you can do it manually. First of all you need to create a virtual environment. In order to do this you can run the following comands in the parent folder.
 ```bash
@@ -133,17 +144,9 @@ $ pip freeze > requirements.txt
 Remove module:
 $ pip remove <package-name>
 
-# setup 
 
-Used to package all the modules or application for the project into a distributable package that can be installed by other users. The script contains information about the package, including its name, version, author, description, and dependencies, among other things.
-the setuptools package is needed 
-$ pip install setuptools
 
-load all the requirements for the project 
-$ python Setup.py install
-$ python Setup.py build
 
-model training 
 
 
 
