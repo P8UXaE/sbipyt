@@ -1,5 +1,7 @@
 After running the command
+```
 $ python biter.py -i pdb 1mee.pdb
+```
 The results shown in the console are the following:
 
 ```bash
