@@ -219,6 +219,10 @@ Alpha helix:
 For the alpha helix, the number of residues between one and another residue goes from 3 to 5. Also, the distance between those residues is less than 3.4 Å. Also Φ has to be 92 ± 35 %, and Ψ must be 98 ± 35 %.
 
 $$n_(r<sub>j</sub>) = n_(r<sub>i</sub>) + 3,4,5$$
+$$d(n<sub>rj</sub>,n<sub>ri</sub>)<3.4$$
+$$92-35\%<Φ<92+35%$$
+$$98-35\%<Ψ<98+35%$$
+
 
 Beta sheet:
 For the beta sheet first the distance between Ni and Oj must be < 3.2 Å. Then a H is placed in the same plane as Cα-N-C at a distance of the midpoint of Cα-C, but in the opposite direction. Having placed the H in between Ni and Oj it is time to calculate the angle being H the vertex. The angle must be 180 ± 15 %.
