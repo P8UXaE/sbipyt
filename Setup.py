@@ -1,7 +1,26 @@
+
 # setup.py
 
-from setuptools import setup, find_packages
 
+from setuptools import setup, find_packages
+from setuptools.command.install import install
+import subprocess
+import sys
+import os
+
+class InstallCommand(install):
+    """Custom install command to create virtual environment and install dependencies."""
+    def run(self):
+        # Create virtual environment
+        subprocess.run([sys.executable, '-m', 'venv', 'myenv'])
+
+        # Activate virtual environment and install pandas
+        subprocess.run('source myenv/bin/activate', shell=True)
+        #subprocess.run(['myenv/bin/python', '-m', 'pip', 'install', 'pandas'])
+        
+        # Run regular install command
+        install.run(self)
+        
 setup(name='Protein binding site prediction',      
       version='1.0',      
       description='Description of my project',      
@@ -25,6 +44,16 @@ setup(name='Protein binding site prediction',
     ],
         cmdclass={
         'install': InstallCommand,
-    }
+    },
 )
 
+
+'''
+# Create the virtual environment
+subprocess.run(['python3.9', '-m', 'venv', 'myenv'])
+
+subprocess.run('source myenv/bin/activate && pip install pandas', shell=True)
+
+# Install packages inside the virtual environment
+subprocess.run(['pip', 'install', 'pandas'])
+'''
