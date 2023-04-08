@@ -47,20 +47,14 @@ The protein structure is extracted from the protein.mol2 file. The atoms that ar
 
 # git add . && git reset ./python3_9venv
 
-# setup 
-Used to package all the modules or application for the project into a distributable package that can be installed by other users. The script contains information about the package, including its name, version, author, description, and dependencies, among other things.
-the setuptools package is needed 
-$ pip install setuptools
-
-load all the requirements for the project 
-$ python Setup.py install
+# Create working environment 
 
 Create a virtual env:
-$ python3.9 -m venv myenv (in order to install pytorch)
-$ source myenv/bin/activate
+$ python3.9 -m venv python3_9venv (in order to install pytorch)
+$ source python3_9venv/bin/activate
 $ deactivate
 To remove the virtual env:
-$ rm -rf myenv
+$ rm -rf python3_9venv
 
 Check modules:
 $ pip list
@@ -70,6 +64,18 @@ $ pip freeze > requirements.txt
 Remove module:
 $ pip remove <package-name>
 
+<<<<<<< HEAD
+# setup 
+Used to package all the modules or application for the project into a distributable package that can be installed by other users. The script contains information about the package, including its name, version, author, description, and dependencies, among other things.
+the setuptools package is needed 
+$ pip install setuptools
+
+load all the requirements for the project 
+$ python Setup.py install
+$ python Setup.py build
+
+model training 
+=======
 
 # PDB style
 
@@ -102,4 +108,8 @@ ATOM    440  C3'  DC N 263     159.760 131.766 114.501  1.00255.48           C
 ATOM    441  O3'  DC N 263     160.725 130.801 114.890  1.00255.48           O  
 ATOM    442  C2'  DC N 263     158.349 131.183 114.538  1.00255.48           C  
 ATOM    443  C1'  DC N 263     158.064 131.264 116.024  1.00255.48           C  
+<<<<<<< HEAD
 ```
+=======
+>>>>>>> 26e9efa34928796d7d55c00e14f35a19de5745a3
+>>>>>>> e255c1e698bc280297e4d6fe857ab9c6d6a6cbae
