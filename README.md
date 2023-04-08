@@ -227,7 +227,7 @@ For the beta sheet first the distance between Ni and Oj must be < 3.2 Å. Then a
 
 It returns a matrix with the potential for every pair of atoms.
 
-$$W(r)=4ε((σ/r)^^12-(σ/r)^6 )$$
+$$W(r)=4ε((σ/r)^{12}-(σ/r)^6 )$$
 
 ε and σ are obtained from a library that has those values from each pair of atoms [https://github.com/choderalab/ambermini/blob/master/share/amber/dat/leap/parm/parm99.dat].
 
