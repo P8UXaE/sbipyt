@@ -261,4 +261,6 @@ Every protein loop the program loads the existing model and tries to improve it,
 
 ## Further progress
 
-While developing the 
+While developing the algorithm some further investigation was thought:
+1. Instead of working using single atoms, precalcualte the residue properties as a mean of all the atoms and use the residues to feed the ML model. This way less data to feed the ML is used and less variaty is seen.
+2. Use techniques such as upgrading the minority group. This way we could rise the atoms or residues taking part in binding processes to higher levels, up to 50%. This could result in a better output and accuracy of the model.
