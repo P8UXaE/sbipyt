@@ -73,8 +73,9 @@ $ pip remove <package-name>
 
 # PDB style
 
-The pdb file must be like the following example in order to be integrated in the class:
+The pdb file must be like the following example in order to be integrated in the python class:
 (1mee - *https://www.rcsb.org/structure/1MEE*)
+```bash
 ATOM      1  N   ALA A   1     -16.582  25.909  46.648  1.00 25.87           N  
 ATOM      2  CA  ALA A   1     -16.120  24.544  46.323  1.00 60.37           C  
 ATOM      3  C   ALA A   1     -15.090  24.573  45.193  1.00 39.03           C  
@@ -86,9 +87,10 @@ ATOM      8  C   GLN A   2     -13.100  22.564  43.399  1.00 15.42           C
 ATOM      9  O   GLN A   2     -13.394  21.452  43.865  1.00 14.10           O  
 ATOM     10  CB  GLN A   2     -11.668  23.893  45.007  1.00 14.39           C  
 ATOM     11  CG  GLN A   2     -10.450  23.827  44.068  1.00 12.20           C  
-
+```
 This pdb type won't work:
 (8ad1 - *https://www.rcsb.org/structure/8AD1*)
+```bash
 ATOM    433  P    DC N 263     157.725 135.829 113.933  1.00255.48           P  
 ATOM    434  OP1  DC N 263     158.817 136.674 113.402  1.00255.48           O  
 ATOM    435  OP2  DC N 263     156.489 135.643 113.142  1.00255.48           O  
@@ -100,3 +102,4 @@ ATOM    440  C3'  DC N 263     159.760 131.766 114.501  1.00255.48           C
 ATOM    441  O3'  DC N 263     160.725 130.801 114.890  1.00255.48           O  
 ATOM    442  C2'  DC N 263     158.349 131.183 114.538  1.00255.48           C  
 ATOM    443  C1'  DC N 263     158.064 131.264 116.024  1.00255.48           C  
+```
