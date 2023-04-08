@@ -137,6 +137,15 @@ The training process:
 2. Using the model, do the calculus and the parameter modification of the model for every atom in a protein.
 3. Once all the protein has been evaluated and has been used in order to improve the model, the protein folder is written down in a list in order to not be used again to train the model, given that the program is coded in order to use every protein in scPDB folder to train the model.
 
+In order to run the training algorithm you need to move to the training folder, and have downloaded the scPDB data in the folder. Then just run
+```
+$ python train2.py 2> acc2.log
+```
+This will run the training script. You can see the accuracy only when the ML process has started, after the first 'Computing pocket points...':
+```
+tail -n 5 acc2.log
+```
+
 ## PDB working type
 
 The pdb file must be like the following example in order to be integrated in the python class:
@@ -259,3 +268,15 @@ Every protein loop the program loads the existing model and tries to improve it,
 While developing the algorithm some further investigation was thought:
 1. Instead of working using single atoms, precalcualte the residue properties as a mean of all the atoms and use the residues to feed the ML model. This way less data to feed the ML is used and less variaty is seen.
 2. Use techniques such as upgrading the minority group. This way we could rise the atoms or residues taking part in binding processes to higher levels, up to 50%. This could result in a better output and accuracy of the model.
+
+
+
+
+
+# Background and cientific explanation 
+
+SASA (Solvent Accessible Surface Area) is a program that calculates the solvent-accessible surface area of a molecule, which is a measure of the exposed surface area of a molecule that is available for interaction with solvent molecules. The SASA program calculates the surface area of a molecule by using an algorithm that defines the solvent-accessible surface as the surface that can be reached by a probe sphere that rolls along the surface of the molecule without penetrating it.
+The output of the SASA program typically includes a feature matrix and an adjacent matrix that describe the molecule's surface area and connectivity, respectively.
+The feature matrix contains a row for each atom in the molecule and a column for each feature, such as the SASA, atomic radius, or charge. The SASA value for each atom is usually included as one of the features in the matrix.
+
+The adjacent matrix describes the connectivity between atoms in the molecule, typically in the form of a sparse matrix where each row and column corresponds to an atom, and the entries indicate the strength of the bond between the atoms. In some cases, the adjacent matrix may also include information on non-covalent interactions, such as hydrogen bonds or Van der Waals interactions.
