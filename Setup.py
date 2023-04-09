@@ -1,6 +1,14 @@
 
 # setup.py
 
+'''
+The setup script is the centre of all activity in building, distributing, and installing modules
+using the Distutils. The main purpose of the setup script is to describe your module distribution 
+to the Distutils, so that the various commands that operate on your modules do the right thing
+
+you can set up your required packages in the environment created for the work, then it would not affect 
+the versions of the packages that you are working in your base.
+'''
 
 from setuptools import setup, find_packages
 from setuptools.command.install import install
@@ -21,12 +29,12 @@ class InstallCommand(install):
         # Run regular install command
         install.run(self)
         
-setup(name='Protein binding site prediction',      
+setup(name='Protein_binding_site_prediction',      
       version='1.0',      
-      description='Description of my project',      
+      description='The required packages needed for the biter program',      
       author='Pau Pujol Vives, Junhua Ye',      
       author_email='paupujolvives@gmail.com, junhuay00@gmail.com',      
-      url='http://www.url_of_my_project.org',      
+      url='https://github.com/P8UXaE/sbipyt',      
       # packages=['proteinclass'], 
       packages=find_packages(),
       install_requires=[
@@ -47,13 +55,3 @@ setup(name='Protein binding site prediction',
     },
 )
 
-
-'''
-# Create the virtual environment
-subprocess.run(['python3.9', '-m', 'venv', 'myenv'])
-
-subprocess.run('source myenv/bin/activate && pip install pandas', shell=True)
-
-# Install packages inside the virtual environment
-subprocess.run(['pip', 'install', 'pandas'])
-'''

@@ -11,7 +11,7 @@ It is important to have completed those steps:
 2.	Have executed the setup.py in order to create the necessary environment
 
 To run biter you just have to type the input file type and the file itself (pdb or mol2). It will generate a solution file that can be called using chimera to show the distribution of probabilities through all the residues to take part on a binding site.
-To see all the options you can type and mer information
+To see all the options you can type and mer information (run in the biter folder)
 ```
 $ python biter.py --help
 ```
@@ -65,15 +65,22 @@ Used to package all the modules or application for the project into a distributa
 the setuptools package is needed 
 $ pip install setuptools
 
-load all the requirements for the project 
+You can run the setup.sh script to create a python working environment with a particular version of the python (3.9) and it installs and load all the requirements for the project, you just have to activate the environment and you will be able to run the biter programm. 
+Before make executable the setup.sh.
+
 ```
-$ python Setup.py install
-$ python Setup.py build
+$ chmod +x setup.sh 
+$ ./setup.sh
+```
+To activate the environment 
+
+```
+$ source python3_9venv/bin/activate
 ```
 
 ## Create working environment - Manual Setup
 
-If the setup.py file does not work, you can do it manually. First of all you need to create a virtual environment. In order to do this you can run the following comands in the parent folder.
+If the setup.sh file does not work, you can do it manually. First of all you need to create a virtual environment. In order to do this you can run the following comands in the parent folder.
 ```bash
 $ python3.9 -m venv python3_9venv
 ```
@@ -182,7 +189,7 @@ ATOM    443  C1'  DC N 263     158.064 131.264 116.024  1.00255.48           C
 
 ## Theory
 
-The binding sites detector is coded mainly as a machine learning approach. It first computes some data and using the pytorch package it trains an artificial intelligence that is capable to predict if each atom of a molecule takes part on a binding site or not. Lately, to filter the solutions, a clustering algorithm is computed in order to detect regions with high positive solution density. To get every data row passed to the model, it must compute some features:
+The binding sites detector is coded mainly as a machine learning approach. It first computes some data and using the pytorch package it trains an artificial intelligence that is capable to predict if each atom of a molecule takes part on a binding site or not. Lately, to filter the solutions, a clustering algorithm is computed in order to detect regions with high positive solution density. It wouldn't consider the Hidrogen molecules and train a model based on atomical level. To get every data row passed to the model, it must compute some features:
 1. Every row contains the atom that we are evaluating and its 15 nearest neighbors.
 2. For every neighbor:
 
