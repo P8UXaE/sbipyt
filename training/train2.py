@@ -34,7 +34,7 @@ mlp_model = MLP(input_dim, hidden_dim, output_dim)
 criterion = nn.BCELoss()
 optimizer = optim.Adam(mlp_model.parameters(), lr=0.001)
 
-rootdir = 'scPDB/'
+rootdir = '../scPDB/'
 accuracy = 0
 iters = 1
 
