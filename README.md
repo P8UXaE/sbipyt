@@ -1,6 +1,8 @@
 # SBI-PYTHON project
 ## BITER: a Binding sITEs detectoR for proteins
 
+*https://github.com/P8UXaE/sbipyt*
+
 The main approach to detect binding sites on proteins is by ML. It also has a geometric approach that is able to detect pockets. The optimal version of python to run the algorithm is v3.9 because is the most suitable to work with packages such as pythorch.
 
 
