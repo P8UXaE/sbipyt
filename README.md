@@ -277,6 +277,7 @@ The data used is a curated database that each protein has at least one known bin
 The algorithm for training opens the folder called scPDB and loads one at time protein.mol2 file. It is continuously learning, the program does not need to learn on one single dataframe. This is more useful, because the computational resources needed are less that when trying to load large amounts of information in a single time.
 Every protein loop the program loads the existing model and tries to improve it, when all the atoms of the protein have passed through the ML, the new model is saved, also the protein used is written down on a file. This way the algorithm can be paused at any time, and the information lost will just be the modified model with the protein running at the pause moment.
 
+Using all this data the model has an accuracy of ~80%, being the difference with the target (1 or 0) and the prediction.
 
 ## Further progress
 
