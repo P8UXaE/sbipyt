@@ -293,7 +293,7 @@ In this 2D example we can see 2 atoms (red spheres) with SASA > 0. In this parti
 Once we have all the collisions we know the θ and ϕ angles (in the case of the sphere). In the case of 2D protein we would have just one angle. Now, we have to know which angles do provide a collision with the protein. If it is 0.5 or higher of the sphere we know we are in a concave site. That would be the case of 2 and 3 green dots.
 When working in 3D, the area of the sphere is computed using θ and ϕ angles, so in that case we search for an area equal or grater than 2π. 
 
-In order to calculate the sphere's area, it is divided into 4 tropics (that have a θ angle of 45º) and 8 meridians (that have a ϕ angle of 45º). Then, the area of top and bottom poles is calculated with 3 existing points whether the 2 middle portions of the sphere (45º $\le$ θ $\le$ 135º).
+In order to calculate the sphere's area, it is divided into 4 tropics (that have a θ angle difference of 45º) and 8 meridians (that have a ϕ angle difference of 45º). Then, the area of top and bottom poles is calculated with 3 existing points whether the 2 middle portions of the sphere (45º $\le$ θ $\le$ 135º).
 
 The points that meet all this characteristics are then clustered. The points and the higher density point regions are the output of the geometric algorithm.
 
