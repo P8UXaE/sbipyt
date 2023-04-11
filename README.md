@@ -168,7 +168,7 @@ The pipeline training process:
 2. Using the model, do the calculus and the parameter modification of the model for every atom in a protein.
 3. Once all the protein has been evaluated and has been used in order to improve the model, the protein folder is written down in a list in order to not be used again to train the model, given that the program is coded in order to use every protein in scPDB folder to train the model.
 
-This training method does not need any RAM memory to keep data from the training set, once the array of an atom has been used, it is replaced by the next one. In conventional techniques, you need to keep big files with all the data, and the larger the data, the higher the RAM requirement.
+This training method does not need any RAM memory to keep data from the training set, once the array of an atom has been used, it is replaced by the next one. In conventional techniques where you train a model with just a dataframe, you need to keep big files with all the data, and the larger the data, the higher the RAM requirement.
 
 In order to run the training algorithm you need to move to the training folder, and have downloaded the full scPDB data in the folder. Then just run
 ```
@@ -178,7 +178,7 @@ This will run the training script. You can see the accuracy only when the ML pro
 ```
 tail -n 5 acc2.log
 ```
-After trained the model with 279 different molecules (found in already_trained_molecules.txt file) the accuracy is around the 80%.
+After trained the model with 279 different molecules (found in already_trained_molecules.txt file) the accuracy is ~80%.
 
 ## PDB working type
 
@@ -239,8 +239,6 @@ SASA (Solvent Accessible Surface Area) is a program that calculates the solvent-
 The output of the SASA program typically includes a feature matrix and an adjacent matrix that describe the molecule's surface area and connectivity, respectively.
 The feature matrix contains a row for each atom in the molecule and a column for each feature, such as the SASA, atomic radius, or charge. The SASA value for each atom is usually included as one of the features in the matrix.
 
-The adjacent matrix describes the connectivity between atoms in the molecule, typically in the form of a sparse matrix where each row and column corresponds to an atom, and the entries indicate the strength of the bond between the atoms. In some cases, the adjacent matrix may also include information on non-covalent interactions, such as hydrogen bonds or Van der Waals interactions.
-
 It uses “the “rolling ball” algorithm developed by Shrake & Rupley algorithm, which uses a sphere (of equal radius to a solvent molecule) to probe the surface of the molecule.” [https://biopython.org/docs/dev/api/Bio.PDB.SASA.html]
 
         b) Direction respect the main atom
@@ -284,24 +282,24 @@ In order to transform the letter symbol of each residue and to add hydrophobicit
 
         f) Geometry based.
 
-To add more information about the geometry of the molecule its used a script that calculates points around the protein that are placed on concave regions.
-This script uses the SASA values to know which atoms do have accessible area, then it places points from [x-3, y-3, z-3] to [x+3, y+3, z+3] with a 3 value step. Once it has the points it calculates whether each point is inside another atom or not. If not, it throws other points until reached a distance of 15 or a collision with another atom. Once it has all the collisions it calculates the area of first sphere that is occupied by the collisions. A draw in 2D molecule representation is shown for a better understanding.
+To add more information about the geometry of the molecule we coded a script that calculates points around the protein that are placed on concave regions (pockets).
+
+This script uses the SASA values to know which atoms do have accessible area, then it places points from [x-3, y-3, z-3] to [x+3, y+3, z+3] with a 3 value step around those atoms. Once it has the points it calculates whether each point is inside another atom or not. If not, it throws other points until reached a distance of 15 or a collision with another atom. Once it has all the collisions it calculates the area of first sphere that is occupied by the collisions. A draw in 2D molecule representation is shown for a better understanding.
 
 ![Geometry approach 2d](geometryapproach.png "2D geometry approach algorithm simplifiaction visualisation")
 
-In this 2D example we can see 2 atoms (red spheres) with SASA > 0. In this particular example each atom throws possible points (green dots). Those points can be inside of another atom, that would be the case of the green dots inside the protein, or outside the protein. Later on, using the outside of protein green points, lines are thrown in 45º difference in all directions from distance 2 to 15 or until collision.
+In this 2D example we can see 2 atoms (red spheres) with SASA > 0. In this particular example each atom throws possible points (green dots). Those points can be inside of another atom. That would be the case of the green dots inside the protein. Later on, using the outside of protein green points, lines are thrown in 45º difference in all directions from distance 2 to 15 or until collision.
+
 Once we have all the collisions we know the θ and ϕ angles (in the case of the sphere). In the case of 2D protein we would have just one angle. Now, we have to know which angles do provide a collision with the protein. If it is 0.5 or higher of the sphere we know we are in a concave site. That would be the case of 2 and 3 green dots.
 When working in 3D, the area of the sphere is computed using θ and ϕ angles, so in that case we search for an area equal or grater than 2π. 
-Once the program has all the points, it adds 10 features foreach atom, those features being the 10 nearest distances to those points using KDTrees algorithm.
+
+In order to calculate the sphere's area, it is divided into 4 tropics (that have a θ angle of 45º) and 8 meridians (that have a ϕ angle of 45º). Then, the area of top and bottom poles is calculated with 3 existing points whether the 2 middle portions of the sphere (45º $\le$ θ $\le$ 135º).
+
+The points that meet all this characteristics are then clustered. The points and the higher density point regions are the output of the geometric algorithm.
+
+Once the program has all the points, it adds 10 features foreach atom, those features being the 10 nearest distances to those points using KDTrees algorithm. 
 
 All this information is fed to the machine learning approach. For every molecule, it’s feed each single atom (avoiding H because some pdb may not have this information). 
-
-The data used is a curated database that each protein has at least one known binding site, so that leads to a good data used.
-
-The algorithm for training opens the folder called scPDB and loads one at time protein.mol2 file. It is continuously learning, the program does not need to learn on one single dataframe. This is more useful, because the computational resources needed are less that when trying to load large amounts of information in a single time.
-Every protein loop the program loads the existing model and tries to improve it, when all the atoms of the protein have passed through the ML, the new model is saved, also the protein used is written down on a file. This way the algorithm can be paused at any time, and the information lost will just be the modified model with the protein running at the pause moment.
-
-Using all this data the model has an accuracy of ~80%, being the difference with the target (1 or 0) and the prediction.
 
 ## Further progress
 
